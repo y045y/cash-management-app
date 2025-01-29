@@ -29,7 +29,7 @@ sql.connect(config)
 app.get("/api/transactions", async (req, res) => {
     try {
         const result = await sql.query("SELECT * FROM Transactions ORDER BY TransactionDate DESC");
-        res.json(result.recordset); // JSON形式でデータを返す
+        res.json(result.recordset); // JSON 形式でデータを返す
     } catch (err) {
         console.error("❌ SQL エラー:", err);
         res.status(500).json({ error: "データ取得に失敗しました" });
@@ -45,6 +45,16 @@ app.get("/api/cashstate", async (req, res) => {
         } else {
             res.json({ CurrentInventory: {}, TotalAmount: 0 });
         }
+    } catch (err) {
+        console.error("❌ SQL エラー:", err);
+        res.status(500).json({ error: "データ取得に失敗しました" });
+    }
+});
+
+app.get("/api/cashstate", async (req, res) => {
+    try {
+        const result = await sql.query("EXEC CalculateCurrentInventory");
+        res.json(result.recordset[0]); // 結果をJSONで返す
     } catch (err) {
         console.error("❌ SQL エラー:", err);
         res.status(500).json({ error: "データ取得に失敗しました" });
