@@ -25,7 +25,8 @@
     "web-vitals": "^4.2.4"
   },
   "devDependencies": {
-    "@babel/plugin-proposal-private-property-in-object": "^7.21.11"
+    "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
+    "concurrently": "^9.1.2"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -59,7 +60,6 @@
     "verbose": true,
     "testEnvironment": "jsdom"
   },
-  "homepage": "https://cashmanegement-backend.azurewebsites.net/"
-,
+  "homepage": "https://cashmanegement-backend.azurewebsites.net/",
   "proxy": "https://cashmanegement-backend.azurewebsites.net/"
 }

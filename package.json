@@ -1,0 +1,12 @@
+{
+    "name": "cash-management",
+    "version": "1.0.0",
+    "description": "Backend & Frontend together",
+    "scripts": {
+      "start": "concurrently \"npm run dev --prefix backend\" \"npm start --prefix frontend\""
+    },
+    "dependencies": {
+      "concurrently": "^7.6.0"
+    }
+  }
+  
