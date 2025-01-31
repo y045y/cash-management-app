@@ -1,76 +1,121 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import Modal from "react-modal"; // ✅ モーダルを使用
+import Modal from "react-modal";
 
+// モーダルの設定
 Modal.setAppElement("#root");
 
 const TransactionHistory = () => {
-  const [history, setHistory] = useState([]);
-  const [editingItem, setEditingItem] = useState(null);
+  const [history, setHistory] = useState([]); // 取引履歴データ
+  const [currentMonth, setCurrentMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
+  const [carryOver, setCarryOver] = useState(null); // 繰越データ
+  const [editingItem, setEditingItem] = useState(null); // 編集中の取引データ
+  const [finalDenominations, setFinalDenominations] = useState({}); // 月末の金種データ
 
   useEffect(() => {
-    fetchHistory();
-  }, []);
+    fetchHistory(currentMonth);
+    fetchCarryOver(currentMonth);
+  }, [currentMonth]);
 
-  const fetchHistory = async () => {
+  // 取引履歴を取得
+  const fetchHistory = async (month) => {
     try {
-      const response = await axios.get("http://localhost:5000/api/history");
+      const response = await axios.get(`http://localhost:5000/api/history?month=${month}`);
       setHistory(response.data);
     } catch (error) {
       console.error("❌ データ取得エラー:", error);
     }
   };
 
-  const handleEdit = (transaction) => {
-    setEditingItem({ ...transaction });
-  };
-
-  const handleCancelEdit = () => {
-    setEditingItem(null);
-  };
-
-  const handleChange = (e) => {
-    setEditingItem({ ...editingItem, [e.target.name]: e.target.value });
-  };
-
-  const handleDenominationChange = (e, key) => {
-    setEditingItem({
-      ...editingItem,
-      [key]: parseInt(e.target.value, 10) || 0,
-    });
-  };
-
-  const handleUpdate = async () => {
+  // 前月の繰越データを取得
+  const fetchCarryOver = async (month) => {
     try {
-      const denominationJson = {
-        "10000": editingItem.TenThousandYen || 0,
-        "5000": editingItem.FiveThousandYen || 0,
-        "1000": editingItem.OneThousandYen || 0,
-        "500": editingItem.FiveHundredYen || 0,
-        "100": editingItem.OneHundredYen || 0,
-        "50": editingItem.FiftyYen || 0,
-        "10": editingItem.TenYen || 0,
-        "5": editingItem.FiveYen || 0,
-        "1": editingItem.OneYen || 0,
-      };
-
-      const updatedData = {
-        ...editingItem,
-        DenominationJson: JSON.stringify(denominationJson),
-      };
-
-      await axios.put(`http://localhost:5000/api/transactions/${editingItem.Id}`, updatedData);
-      alert("✅ 取引を修正しました！");
-      setEditingItem(null);
-      fetchHistory();
+      const response = await axios.get(`http://localhost:5000/api/history/last?month=${month}`);
+      if (response.data && Object.keys(response.data).length > 0) {
+        setCarryOver(response.data);
+      } else {
+        console.warn("⚠️ 繰越データなし（デフォルトを設定）");
+        setCarryOver({
+          TotalBalance: 0,
+          TenThousandYen: 0,
+          FiveThousandYen: 0,
+          OneThousandYen: 0,
+          FiveHundredYen: 0,
+          OneHundredYen: 0,
+          FiftyYen: 0,
+          TenYen: 0,
+          FiveYen: 0,
+          OneYen: 0,
+        });
+      }
     } catch (error) {
-      console.error("❌ 更新エラー:", error);
+      console.error("❌ 繰越データ取得エラー:", error);
+      setCarryOver({
+        TotalBalance: 0,
+        TenThousandYen: 0,
+        FiveThousandYen: 0,
+        OneThousandYen: 0,
+        FiveHundredYen: 0,
+        OneHundredYen: 0,
+        FiftyYen: 0,
+        TenYen: 0,
+        FiveYen: 0,
+        OneYen: 0,
+      });
     }
   };
+
+  // 月を変更
+  const changeMonth = (offset) => {
+    const newDate = new Date(currentMonth + "-01");
+    newDate.setMonth(newDate.getMonth() + offset);
+    setCurrentMonth(newDate.toISOString().slice(0, 7));
+  };
+
+  // 金種の最終状態を計算
+  useEffect(() => {
+    if (carryOver && history.length > 0) {
+      let finalDenom = { ...carryOver };
+
+      history.forEach((item) => {
+        if (item.TransactionType === "入金") {
+          finalDenom.TenThousandYen += item.TenThousandYen || 0;
+          finalDenom.FiveThousandYen += item.FiveThousandYen || 0;
+          finalDenom.OneThousandYen += item.OneThousandYen || 0;
+          finalDenom.FiveHundredYen += item.FiveHundredYen || 0;
+          finalDenom.OneHundredYen += item.OneHundredYen || 0;
+          finalDenom.FiftyYen += item.FiftyYen || 0;
+          finalDenom.TenYen += item.TenYen || 0;
+          finalDenom.FiveYen += item.FiveYen || 0;
+          finalDenom.OneYen += item.OneYen || 0;
+        } else if (item.TransactionType === "出金") {
+          finalDenom.TenThousandYen -= item.TenThousandYen || 0;
+          finalDenom.FiveThousandYen -= item.FiveThousandYen || 0;
+          finalDenom.OneThousandYen -= item.OneThousandYen || 0;
+          finalDenom.FiveHundredYen -= item.FiveHundredYen || 0;
+          finalDenom.OneHundredYen -= item.OneHundredYen || 0;
+          finalDenom.FiftyYen -= item.FiftyYen || 0;
+          finalDenom.TenYen -= item.TenYen || 0;
+          finalDenom.FiveYen -= item.FiveYen || 0;
+          finalDenom.OneYen -= item.OneYen || 0;
+        }
+      });
+
+      setFinalDenominations(finalDenom);
+    }
+  }, [carryOver, history]);
 
   return (
     <div className="container mt-4">
       <h2 className="mb-3">取引履歴</h2>
+
+      {/* 月切り替えボタン */}
+      <div className="mb-3">
+        <button className="btn btn-outline-primary me-2" onClick={() => changeMonth(-1)}>前月</button>
+        <span className="fw-bold">{currentMonth}</span>
+        <button className="btn btn-outline-primary ms-2" onClick={() => changeMonth(1)}>次月</button>
+      </div>
+
       <table className="table table-bordered">
         <thead className="table-dark">
           <tr>
@@ -83,7 +128,6 @@ const TransactionHistory = () => {
             <th>メモ</th>
             <th>金額</th>
             <th>残高</th>
-            {/* ✅ 金種の列を追加 */}
             <th>万</th>
             <th>5千</th>
             <th>千</th>
@@ -97,72 +141,26 @@ const TransactionHistory = () => {
           </tr>
         </thead>
         <tbody>
-          {history.map((item) => (
-            <tr key={item.Id}>
-              <td>{new Date(item.TransactionDate).toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" })}</td>
-              <td className="text-end">{item.TransactionType === "入金" ? item.Amount.toLocaleString() : "-"}</td>
-              <td className="text-end">{item.TransactionType === "出金" ? item.Amount.toLocaleString() : "-"}</td>
-              <td className="text-center">{item.TransactionType === "その他" ? "✔" : "-"}</td>
-              <td>{item.Summary}</td>
-              <td>{item.Recipient || "-"}</td>
-              <td>{item.Memo}</td>
-              <td className="text-end">{item.Amount.toLocaleString()}</td>
-              <td className="text-end fw-bold">{item.TotalBalance.toLocaleString()}</td>
-              {/* ✅ 修正前の金種表示 */}
-              <td className="text-end">{item.TenThousandYen}</td>
-              <td className="text-end">{item.FiveThousandYen}</td>
-              <td className="text-end">{item.OneThousandYen}</td>
-              <td className="text-end">{item.FiveHundredYen}</td>
-              <td className="text-end">{item.OneHundredYen}</td>
-              <td className="text-end">{item.FiftyYen}</td>
-              <td className="text-end">{item.TenYen}</td>
-              <td className="text-end">{item.FiveYen}</td>
-              <td className="text-end">{item.OneYen}</td>
-              <td>
-                <button className="btn btn-warning btn-sm me-2" onClick={() => handleEdit(item)}>修正</button>
-              </td>
+          {/* 繰越金額の行 */}
+          {carryOver !== null && (
+            <tr className="table-warning">
+              <td>繰越</td>
+              <td colSpan="7"></td>
+              <td className="fw-bold">{carryOver.TotalBalance.toLocaleString()}</td>
+              <td>{carryOver.TenThousandYen}</td>
+              <td>{carryOver.FiveThousandYen}</td>
+              <td>{carryOver.OneThousandYen}</td>
+              <td>{carryOver.FiveHundredYen}</td>
+              <td>{carryOver.OneHundredYen}</td>
+              <td>{carryOver.FiftyYen}</td>
+              <td>{carryOver.TenYen}</td>
+              <td>{carryOver.FiveYen}</td>
+              <td>{carryOver.OneYen}</td>
+              <td></td>
             </tr>
-          ))}
+          )}
         </tbody>
       </table>
-
-      {/* ✅ モーダル */}
-      {editingItem && (
-        <Modal isOpen={!!editingItem} onRequestClose={handleCancelEdit} className="modal-dialog">
-          <div className="modal-content p-4">
-            <h4>取引修正</h4>
-
-            <label>日付</label>
-            <input type="date" name="TransactionDate" value={editingItem.TransactionDate.split("T")[0]} onChange={handleChange} className="form-control mb-2" />
-
-            <label>種別</label>
-            <select name="TransactionType" value={editingItem.TransactionType} onChange={handleChange} className="form-control mb-2">
-              <option value="入金">入金</option>
-              <option value="出金">出金</option>
-              <option value="その他">その他</option>
-            </select>
-
-            <label>金額</label>
-            <input type="number" name="Amount" value={editingItem.Amount} onChange={handleChange} className="form-control mb-2" />
-
-            {/* ✅ 金種の編集 */}
-            <label>金種</label>
-            <div className="row">
-              {["TenThousandYen", "FiveThousandYen", "OneThousandYen", "FiveHundredYen", "OneHundredYen", "FiftyYen", "TenYen", "FiveYen", "OneYen"].map((key, index) => (
-                <div className="col-4 mb-2" key={index}>
-                  <label>{key.replace("Yen", "")}円</label>
-                  <input type="number" value={editingItem[key] || 0} onChange={(e) => handleDenominationChange(e, key)} className="form-control" />
-                </div>
-              ))}
-            </div>
-
-            <div className="d-flex justify-content-end mt-3">
-              <button className="btn btn-secondary me-2" onClick={handleCancelEdit}>キャンセル</button>
-              <button className="btn btn-primary" onClick={handleUpdate}>保存</button>
-            </div>
-          </div>
-        </Modal>
-      )}
     </div>
   );
 };
