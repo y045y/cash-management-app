@@ -61,6 +61,8 @@ app.get("/api/transactions", async (req, res) => {
 
 app.post("/api/transactions", async (req, res) => {
     try {
+        console.log("📌 受信データ:", req.body);  // ← リクエストボディの内容をログに出力
+
         const {
             TransactionDate, TransactionType, Amount, Summary, Memo, Recipient,
             TenThousandYen, FiveThousandYen, OneThousandYen,
@@ -80,6 +82,8 @@ app.post("/api/transactions", async (req, res) => {
             "5": FiveYen || 0,
             "1": OneYen || 0
         });
+
+        console.log("📌 変換後の DenominationJson:", denominationJson);  // ← JSON データが正しいかログ出力
 
         // ✅ SQL にデータを挿入
         await sql.query(`
@@ -111,16 +115,28 @@ app.get("/api/cashstate", async (req, res) => {
     }
 });
 
-// ✅ `/api/history` - 取引履歴を取得し、DenominationJson を JSON にパース
+// ✅ `/api/history` - 指定された月の取引履歴を取得
 app.get("/api/history", async (req, res) => {
-    try {
-        const result = await sql.query("EXEC CalculateTransactionHistory");
+    const { month } = req.query; // YYYY-MM の形式で取得
 
-        // ✅ JSON をパース
-        const transactions = result.recordset.map((item) => ({
-            ...item,
-            DenominationJson: item.DenominationJson ? JSON.parse(item.DenominationJson) : {}
-        }));
+    if (!month) {
+        return res.status(400).json({ error: "❌ `month` パラメータが必要です" });
+    }
+
+    try {
+        // `CalculateTransactionHistory` を実行（ストアドプロシージャ）
+        const result = await sql.query(`EXEC CalculateTransactionHistory`);
+
+        // ✅ 受け取ったデータをフィルタリング（該当月のみ取得）
+        const transactions = result.recordset
+            .map(item => ({
+                ...item,
+                TransactionDate: item.TransactionDate.toISOString().split("T")[0], // YYYY-MM-DD
+                DenominationJson: item.DenominationJson ? JSON.parse(item.DenominationJson) : {}
+            }))
+            .filter(item => item.TransactionDate.startsWith(month)); // YYYY-MM に一致するもののみ取得
+
+        console.log(`📅 ${month} の履歴データ取得:`, transactions);
 
         res.json(transactions);
     } catch (err) {
@@ -128,22 +144,9 @@ app.get("/api/history", async (req, res) => {
         res.status(500).json({ error: "データ取得に失敗しました" });
     }
 });
-
 app.get("/api/lastmonth", async (req, res) => {
     try {
-        // 現在の日時を取得
-        const today = new Date();
-        
-        // 前月の最終日を求める
-        const lastMonth = new Date(today.getFullYear(), today.getMonth(), 0); // 前月の最終日
-        const lastMonthEndDate = lastMonth.toISOString().split("T")[0]; // YYYY-MM-DD 形式
-
-        // 最も新しい取引データを取得（前月の最後の取引）
-        const result = await sql.query(`
-            SELECT TOP 1 * FROM Transactions
-            WHERE FORMAT(TransactionDate, 'yyyy-MM-dd') <= '${lastMonthEndDate}'
-            ORDER BY TransactionDate DESC
-        `);
+        const result = await sql.query("EXEC CalculateLastTransaction");
 
         if (result.recordset.length === 0) {
             return res.json({
@@ -160,7 +163,7 @@ app.get("/api/lastmonth", async (req, res) => {
             });
         }
 
-        // 繰越データを取得
+        // JSONをパース
         const lastData = result.recordset[0];
 
         res.json({
