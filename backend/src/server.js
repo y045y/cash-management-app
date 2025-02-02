@@ -98,22 +98,22 @@ app.post("/api/transactions", async (req, res) => {
     }
 });
 
-// ✅ `/api/cashstate` - `CalculateCurrentInventory` ストアドを実行
-app.get("/api/cashstate", async (req, res) => {
+app.get('/api/current-inventory', async (req, res) => {
     try {
-        const result = await sql.query("EXEC CalculateCurrentInventory");
-        if (result.recordset.length > 0) {
-            const data = result.recordset[0];
-            data.CurrentInventory = JSON.parse(data.CurrentInventory);
-            res.json(data);
-        } else {
-            res.json({ CurrentInventory: {}, TotalAmount: 0 });
-        }
+      // MSSQL接続
+      const pool = await sql.connect(config);
+      
+      // ストアドプロシージャの呼び出し
+      const result = await pool.request()
+        .execute("dbo.CalculateCurrentInventory");
+      
+      // データをフロントに返す
+      res.json(result.recordsets[0][0]);  // 最初のレコードセットを返す
     } catch (err) {
-        console.error("❌ SQL エラー:", err);
-        res.status(500).json({ error: "データ取得に失敗しました" });
+      console.error("Error executing stored procedure: ", err);
+      res.status(500).send("Internal Server Error");
     }
-});
+  });
 
 // ✅ `/api/history` - 指定された月の取引履歴を取得
 app.get("/api/history", async (req, res) => {
