@@ -30,6 +30,32 @@ const connectDB = async () => {
         process.exit(1);
     }
 };
+// 取引履歴の取得エンドポイント
+
+// ✅ `/api/transaction-history` - 指定された日付の取引履歴を取得
+app.get('/api/transaction-history', async (req, res) => {
+    const startDate = req.query.startDate;
+
+    if (!startDate) {
+        return res.status(400).json({ error: "❌ `startDate` パラメータが必要です" });
+    }
+
+    try {
+        // ✅ アプリ起動時に接続したプールを使用
+        const pool = await sql.connect(config);
+
+        // ✅ ストアドプロシージャを実行
+        const result = await pool.request()
+            .input('StartDate', sql.Date, startDate)
+            .execute('GetTransactionHistory');
+
+        res.json({ transactions: result.recordset });
+    } catch (err) {
+        console.error("❌ データ取得エラー:", err);
+        res.status(500).json({ error: "データベースエラー" });
+    }
+});
+
 app.get("/api/transactions", async (req, res) => {
     try {
         const result = await sql.query(`
@@ -114,6 +140,30 @@ app.get('/api/current-inventory', async (req, res) => {
       res.status(500).send("Internal Server Error");
     }
   });
+  app.get('/api/calculate-carryover', async (req, res) => {
+    const startDate = req.query.startDate;  
+
+    try {
+        // SQL Server データベース接続（環境変数を使用）
+        const pool = await sql.connect({
+            user: process.env.DB_USER,
+            password: process.env.DB_PASSWORD,
+            server: process.env.DB_SERVER,
+            database: process.env.DB_DATABASE,
+        });
+
+        const result = await pool.request()
+            .input('StartDate', sql.Date, startDate)
+            .execute('CalculateCarryOver');
+
+        res.json(result.recordset);
+
+        pool.close();
+    } catch (err) {
+        console.error('ストアドプロシージャ実行エラー:', err);
+        res.status(500).json({ error: 'データベースエラー' });
+    }
+});
 
 // ✅ `/api/history` - 指定された月の取引履歴を取得
 app.get("/api/history", async (req, res) => {
@@ -144,45 +194,45 @@ app.get("/api/history", async (req, res) => {
         res.status(500).json({ error: "データ取得に失敗しました" });
     }
 });
-app.get("/api/lastmonth", async (req, res) => {
-    try {
-        const result = await sql.query("EXEC CalculateLastTransaction");
+// app.get("/api/lastmonth", async (req, res) => {
+//     try {
+//         const result = await sql.query("EXEC CalculateLastTransaction");
 
-        if (result.recordset.length === 0) {
-            return res.json({
-                TotalBalance: 0,
-                TenThousandYen: 0,
-                FiveThousandYen: 0,
-                OneThousandYen: 0,
-                FiveHundredYen: 0,
-                OneHundredYen: 0,
-                FiftyYen: 0,
-                TenYen: 0,
-                FiveYen: 0,
-                OneYen: 0
-            });
-        }
+//         if (result.recordset.length === 0) {
+//             return res.json({
+//                 TotalBalance: 0,
+//                 TenThousandYen: 0,
+//                 FiveThousandYen: 0,
+//                 OneThousandYen: 0,
+//                 FiveHundredYen: 0,
+//                 OneHundredYen: 0,
+//                 FiftyYen: 0,
+//                 TenYen: 0,
+//                 FiveYen: 0,
+//                 OneYen: 0
+//             });
+//         }
 
-        // JSONをパース
-        const lastData = result.recordset[0];
+//         // JSONをパース
+//         const lastData = result.recordset[0];
 
-        res.json({
-            TotalBalance: lastData.TotalBalance || 0,
-            TenThousandYen: lastData.TenThousandYen || 0,
-            FiveThousandYen: lastData.FiveThousandYen || 0,
-            OneThousandYen: lastData.OneThousandYen || 0,
-            FiveHundredYen: lastData.FiveHundredYen || 0,
-            OneHundredYen: lastData.OneHundredYen || 0,
-            FiftyYen: lastData.FiftyYen || 0,
-            TenYen: lastData.TenYen || 0,
-            FiveYen: lastData.FiveYen || 0,
-            OneYen: lastData.OneYen || 0
-        });
-    } catch (err) {
-        console.error("❌ 繰越データ取得エラー:", err);
-        res.status(500).json({ error: "繰越データの取得に失敗しました" });
-    }
-});
+//         res.json({
+//             TotalBalance: lastData.TotalBalance || 0,
+//             TenThousandYen: lastData.TenThousandYen || 0,
+//             FiveThousandYen: lastData.FiveThousandYen || 0,
+//             OneThousandYen: lastData.OneThousandYen || 0,
+//             FiveHundredYen: lastData.FiveHundredYen || 0,
+//             OneHundredYen: lastData.OneHundredYen || 0,
+//             FiftyYen: lastData.FiftyYen || 0,
+//             TenYen: lastData.TenYen || 0,
+//             FiveYen: lastData.FiveYen || 0,
+//             OneYen: lastData.OneYen || 0
+//         });
+//     } catch (err) {
+//         console.error("❌ 繰越データ取得エラー:", err);
+//         res.status(500).json({ error: "繰越データの取得に失敗しました" });
+//     }
+// });
 
 // ✅ `/api/transactions/:id` - 取引を更新（🔥 SQL Injection 防止）
 app.put("/api/transactions/:id", async (req, res) => {
