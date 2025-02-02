@@ -32,7 +32,6 @@ const TransactionHistory = () => {
         <button className="btn btn-outline-primary me-2" onClick={() => setCurrentMonth(prev => new Date(new Date(prev + "-01").setMonth(new Date(prev + "-01").getMonth() - 1)).toISOString().slice(0, 7))}>前月</button>
         <button className="btn btn-outline-secondary me-2" onClick={() => setCurrentMonth(new Date().toISOString().slice(0, 7))}>当月</button>
         <button className="btn btn-outline-primary ms-2" onClick={() => setCurrentMonth(prev => new Date(new Date(prev + "-01").setMonth(new Date(prev + "-01").getMonth() + 1)).toISOString().slice(0, 7))}>次月</button>
-        <PDFButton history={transactions} currentMonth={currentMonth} previousCarryOver={previousCarryOver} />
       </div>
 
       <table className="table table-bordered">

@@ -31,20 +31,20 @@ const styles = StyleSheet.create({
     borderStyle: 'solid',
     borderWidth: 1,
     borderColor: '#000',
-    height: 30, // ✅ 行の高さを統一
+    height: 30, // ✅ 行の高さを固定
+    alignItems: 'center', // ✅ 行の高さを統一するために中央揃え
   },
   tableCell: {
-    paddingVertical: 4,
-    paddingHorizontal: 2,
+    padding: 4, // ✅ ヘッダーとデータ部分のpaddingを統一
     borderStyle: 'solid',
     borderWidth: 1,
     borderColor: '#000',
     fontSize: 10,
     textAlign: 'center',
-    wordWrap: 'break-word',
-    flexGrow: 0, // ✅ 伸縮しないように設定
-    flexShrink: 0, // ✅ 収縮しないように設定
+    flexGrow: 0, // ✅ 伸縮を防止
+    flexShrink: 0, // ✅ 収縮を防止
   },
+  // ✅ カラム幅を統一
   dateCell: { width: 50 },
   typeCell: { width: 60 },
   amountCell: { width: 70 },
@@ -52,12 +52,9 @@ const styles = StyleSheet.create({
   recipientCell: { width: 100 },
   memoCell: { width: 100 },
   balanceCell: { width: 80 },
-  currencyCell: { width: 35 }, // ✅ 金種の列幅を均等に設定
+  currencyCell: { width: 35 }, // ✅ 金種の列幅を統一
 });
 
-
-
-// PDF コンポーネント
 const CashManagementPDF = ({ history = [], previousCarryOver = {}, currentMonth }) => {
   const formatNumber = (number) => (number != null ? new Intl.NumberFormat('ja-JP').format(number) : '0');
   const formatDate = (dateString) => {
