@@ -29,7 +29,7 @@ const styles = StyleSheet.create({
   tableRow: {
     flexDirection: 'row',
     borderStyle: 'solid',
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#000',
     height: 30, // ✅ 行の高さを固定
     alignItems: 'center', // ✅ 行の高さを統一するために中央揃え
@@ -102,15 +102,15 @@ const CashManagementPDF = ({ history = [], previousCarryOver = {}, currentMonth 
             <Text style={[styles.tableCell, styles.recipientCell]}></Text>
             <Text style={[styles.tableCell, styles.memoCell]}></Text>
             <Text style={[styles.tableCell, styles.balanceCell]}>{formatNumber(previousCarryOver.RunningBalance || 0)}</Text>
-            <Text style={[styles.tableCell]}>{previousCarryOver.TenThousandYen || 0}</Text>
-            <Text style={[styles.tableCell]}>{previousCarryOver.FiveThousandYen || 0}</Text>
-            <Text style={[styles.tableCell]}>{previousCarryOver.OneThousandYen || 0}</Text>
-            <Text style={[styles.tableCell]}>{previousCarryOver.FiveHundredYen || 0}</Text>
-            <Text style={[styles.tableCell]}>{previousCarryOver.OneHundredYen || 0}</Text>
-            <Text style={[styles.tableCell]}>{previousCarryOver.FiftyYen || 0}</Text>
-            <Text style={[styles.tableCell]}>{previousCarryOver.TenYen || 0}</Text>
-            <Text style={[styles.tableCell]}>{previousCarryOver.FiveYen || 0}</Text>
-            <Text style={[styles.tableCell]}>{previousCarryOver.OneYen || 0}</Text>
+            <Text style={[styles.tableCell, styles.currencyCell]}>{previousCarryOver.TenThousandYen || 0}</Text>
+            <Text style={[styles.tableCell, styles.currencyCell]}>{previousCarryOver.FiveThousandYen || 0}</Text>
+            <Text style={[styles.tableCell, styles.currencyCell]}>{previousCarryOver.OneThousandYen || 0}</Text>
+            <Text style={[styles.tableCell, styles.currencyCell]}>{previousCarryOver.FiveHundredYen || 0}</Text>
+            <Text style={[styles.tableCell, styles.currencyCell]}>{previousCarryOver.OneHundredYen || 0}</Text>
+            <Text style={[styles.tableCell, styles.currencyCell]}>{previousCarryOver.FiftyYen || 0}</Text>
+            <Text style={[styles.tableCell, styles.currencyCell]}>{previousCarryOver.TenYen || 0}</Text>
+            <Text style={[styles.tableCell, styles.currencyCell]}>{previousCarryOver.FiveYen || 0}</Text>
+            <Text style={[styles.tableCell, styles.currencyCell]}>{previousCarryOver.OneYen || 0}</Text>
           </View>
 
           {/* ✅ 取引データ */}
@@ -123,15 +123,15 @@ const CashManagementPDF = ({ history = [], previousCarryOver = {}, currentMonth 
               <Text style={[styles.tableCell, styles.recipientCell]}>{item.Recipient}</Text>
               <Text style={[styles.tableCell, styles.memoCell]}>{item.Memo}</Text>
               <Text style={[styles.tableCell, styles.balanceCell]}>{formatNumber(item.RunningBalance || 0)}</Text>
-              <Text style={[styles.tableCell]}>{item.TenThousandYen || 0}</Text>
-              <Text style={[styles.tableCell]}>{item.FiveThousandYen || 0}</Text>
-              <Text style={[styles.tableCell]}>{item.OneThousandYen || 0}</Text>
-              <Text style={[styles.tableCell]}>{item.FiveHundredYen || 0}</Text>
-              <Text style={[styles.tableCell]}>{item.OneHundredYen || 0}</Text>
-              <Text style={[styles.tableCell]}>{item.FiftyYen || 0}</Text>
-              <Text style={[styles.tableCell]}>{item.TenYen || 0}</Text>
-              <Text style={[styles.tableCell]}>{item.FiveYen || 0}</Text>
-              <Text style={[styles.tableCell]}>{item.OneYen || 0}</Text>
+              <Text style={[styles.tableCell, styles.currencyCell]}>{item.TenThousandYen || 0}</Text>
+              <Text style={[styles.tableCell, styles.currencyCell]}>{item.FiveThousandYen || 0}</Text>
+              <Text style={[styles.tableCell, styles.currencyCell]}>{item.OneThousandYen || 0}</Text>
+              <Text style={[styles.tableCell, styles.currencyCell]}>{item.FiveHundredYen || 0}</Text>
+              <Text style={[styles.tableCell, styles.currencyCell]}>{item.OneHundredYen || 0}</Text>
+              <Text style={[styles.tableCell, styles.currencyCell]}>{item.FiftyYen || 0}</Text>
+              <Text style={[styles.tableCell, styles.currencyCell]}>{item.TenYen || 0}</Text>
+              <Text style={[styles.tableCell, styles.currencyCell]}>{item.FiveYen || 0}</Text>
+              <Text style={[styles.tableCell, styles.currencyCell]}>{item.OneYen || 0}</Text>
             </View>
           ))}
         </View>
