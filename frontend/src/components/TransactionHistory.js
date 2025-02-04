@@ -21,22 +21,33 @@ const TransactionHistory = () => {
   };
 
   return (
-    <div>
-      {/* ✅ レポートタイトルと日付 */}
-      {/* <div className="d-flex justify-content-between align-items-center mb-3">
-        <h2 className="mb-0">金庫管理レポート ({currentMonth}月)</h2>
-        <p className="text-end fs-5">{new Date().toLocaleDateString()}</p>
-      </div> */}
+    <div style={{ textAlign: "center" }}> {/* ✅ 全体を中央寄せ */}
 
-      {/* 🔄 月切り替えボタン */}
-      <div className="mb-3 d-flex">
-        <button className="btn btn-outline-primary me-2" onClick={() => setCurrentMonth(prev => new Date(new Date(prev + "-01").setMonth(new Date(prev + "-01").getMonth() - 1)).toISOString().slice(0, 7))}>前月</button>
-        <button className="btn btn-outline-secondary me-2" onClick={() => setCurrentMonth(new Date().toISOString().slice(0, 7))}>当月</button>
-        <button className="btn btn-outline-primary ms-2" onClick={() => setCurrentMonth(prev => new Date(new Date(prev + "-01").setMonth(new Date(prev + "-01").getMonth() + 1)).toISOString().slice(0, 7))}>次月</button>
+      {/* 🔄 月切り替えボタン + PDFダウンロードを右寄せ */}
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px" }}>
+        <button
+          className="btn btn-outline-primary"
+          onClick={() => setCurrentMonth(prev => new Date(new Date(prev + "-01").setMonth(new Date(prev + "-01").getMonth() - 1)).toISOString().slice(0, 7))}
+        >
+          前月
+        </button>
+        <button
+          className="btn btn-outline-secondary"
+          onClick={() => setCurrentMonth(new Date().toISOString().slice(0, 7))}
+        >
+          当月
+        </button>
+        <button
+          className="btn btn-outline-primary"
+          onClick={() => setCurrentMonth(prev => new Date(new Date(prev + "-01").setMonth(new Date(prev + "-01").getMonth() + 1)).toISOString().slice(0, 7))}
+        >
+          次月
+        </button>
+        <PDFButton transactions={transactions} currentMonth={currentMonth} />
       </div>
 
       {/* ✅ 取引履歴テーブル */}
-      <table className="table table-bordered text-center">
+      <table className="table table-bordered text-center" style={{ fontSize: "12px", margin: "10px auto", maxWidth: "900px" }}>
         <thead className="table-dark">
           <tr>
             <th>日付</th>
@@ -58,10 +69,10 @@ const TransactionHistory = () => {
           </tr>
         </thead>
         <tbody>
-          {/* ✅ 繰越データを最初の行のみに表示 */}
+          {/* ✅ 繰越データを最初の行に表示 */}
           {transactions.length > 0 && (
             <tr>
-              <td>繰越</td>
+              <td>繰</td>
               <td></td>
               <td></td>
               <td className="text-end">{transactions[0].RunningBalance.toLocaleString()}</td>
@@ -80,11 +91,13 @@ const TransactionHistory = () => {
             </tr>
           )}
 
-          {/* ✅ 取引データを表示 */}
+          {/* ✅ 取引データの表示 */}
           {transactions.length > 0 ? (
-            transactions.slice(1).map((tx, index) => ( // 🔹 繰越データを除外
+            transactions.slice(1).map((tx, index) => (
               <tr key={index}>
-                <td>{tx.TransactionDate ? tx.TransactionDate.split("T")[0] : "現在"}</td>
+                {/* 📌 日付フォーマットを "2/5" 形式に変更 */}
+                <td>{tx.TransactionDate ? new Date(tx.TransactionDate).toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" }) : "現"}</td>
+
                 <td className="text-end">{tx.TransactionType === "入金" ? tx.Amount.toLocaleString() : ""}</td>
                 <td className="text-end">{tx.TransactionType === "出金" ? tx.Amount.toLocaleString() : ""}</td>
                 <td className="text-end">{tx.RunningBalance !== null ? tx.RunningBalance.toLocaleString() : "N/A"}</td>
@@ -109,9 +122,6 @@ const TransactionHistory = () => {
           )}
         </tbody>
       </table>
-
-      {/* ✅ PDFダウンロードボタン */}
-      <PDFButton transactions={transactions} currentMonth={currentMonth} />
     </div>
   );
 };

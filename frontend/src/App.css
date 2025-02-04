@@ -2,8 +2,8 @@
 body {
   margin: 0;
   font-family: 'Noto Sans JP', sans-serif;
-  background-color: #f0f0f0;
-  color: #333;
+  background-color: #e0dcdc ; /* 🔹 さらに濃いグレー */
+  color: #e0e0e0; /* 🔹 文字色を明るくして見やすく */
   transition: background-color 0.3s, color 0.3s;
 }
 

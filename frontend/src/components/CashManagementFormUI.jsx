@@ -13,21 +13,19 @@ const CashManagementFormUI = () => {
         recipient: 'なし',
         memo: ''
     });
-    const [totalAmount, setTotalAmount] = useState(0);
-    const [difference, setDifference] = useState(0);
     const [loading, setLoading] = useState(false);
 
     const handleInputChange = (field, value) => {
         setForm((prev) => ({ ...prev, [field]: value }));
     };
 
-    const addHistory = () => {
-        setLoading(true);
-        setTimeout(() => {
-            console.log("保存されたデータ", form);
-            setLoading(false);
-        }, 1000);
-    };
+    // const addHistory = () => {
+    //     setLoading(true);
+    //     setTimeout(() => {
+    //         console.log("保存されたデータ", form);
+    //         setLoading(false);
+    //     }, 1000);
+    // };
     const handleSubmit = async () => {
         const data = {
             TransactionDate: new Date().toISOString(), // YYYY-MM-DDTHH:MM:SS.sssZ 形式
@@ -36,18 +34,22 @@ const CashManagementFormUI = () => {
             Summary: form.description,
             Memo: form.memo,
             Recipient: form.recipient,
-            TenThousandYen: 5,  // 金種の値を適切に設定
-            FiveThousandYen: 0,
-            OneThousandYen: 0,
-            FiveHundredYen: 0,
-            OneHundredYen: 0,
-            FiftyYen: 0,
-            TenYen: 0,
-            FiveYen: 0,
-            OneYen: 0
+            // ✅ 金種の情報をフォームから取得するように修正
+            TenThousandYen: form.tenThousandYen || 0,
+            FiveThousandYen: form.fiveThousandYen || 0,
+            OneThousandYen: form.oneThousandYen || 0,
+            FiveHundredYen: form.fiveHundredYen || 0,
+            OneHundredYen: form.oneHundredYen || 0,
+            FiftyYen: form.fiftyYen || 0,
+            TenYen: form.tenYen || 0,
+            FiveYen: form.fiveYen || 0,
+            OneYen: form.oneYen || 0
         };
     
+        console.log("送信するデータ:", data); // ✅ 送信データを確認
+    
         try {
+            setLoading(true);  // ✅ ローディング開始
             const response = await fetch('/api/insert-transaction', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -61,13 +63,17 @@ const CashManagementFormUI = () => {
             }
         } catch (error) {
             console.error('エラー:', error);
+        } finally {
+            setLoading(false);  // ✅ ローディング終了
         }
     };
+    
     
 
     return (
         <div className="cash-management" style={{ padding: '10px', maxWidth: '800px', margin: 'auto', fontFamily: 'Arial, sans-serif' }}>
             <div className="form-row d-flex" style={{ gap: '8px', display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+                
                 <div className="form-group" style={{ flex: '1' }}>
                     <label htmlFor="dateInput">日付</label>
                     <input id="dateInput" type="date" value={form.date} onChange={(e) => handleInputChange('date', e.target.value)} className="form-control" />
@@ -115,14 +121,20 @@ const CashManagementFormUI = () => {
               </div>
               <CashStateTable />
 
-            <div className="mt-3 text-right">
-                <button className="btn btn-primary" onClick={addHistory} disabled={loading} style={{ fontSize: '14px', padding: '8px 16px', borderRadius: '5px' }}>
-                    {loading ? '処理中...' : '保存'}
-                </button>
+              <div style={{ textAlign: "right" }}>
+              <button
+    className="btn btn-primary"
+    onClick={handleSubmit}  // ✅ ここを変更
+    disabled={loading}
+>
+    {loading ? "処理中..." : "保存"}
+</button>
+
+
             {/* 取引履歴（幅を広くする） */}
-            <div style={{ width: '100vw', maxWidth: '1200px', margin: '20px auto', overflowX: 'auto', textAlign: 'center' }}>
+         
              <TransactionHistory />
-            </div>
+            
             </div>
         </div>
     );
