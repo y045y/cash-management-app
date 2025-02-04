@@ -56,6 +56,46 @@ app.get('/api/transaction-history', async (req, res) => {
     }
 });
 
+app.post("/api/insert-transaction", async (req, res) => {
+    try {
+        console.log("📌 受信データ:", req.body); // デバッグログ
+
+        const {
+            TransactionDate, TransactionType, Amount, Summary, Memo, Recipient,
+            TenThousandYen, FiveThousandYen, OneThousandYen,
+            FiveHundredYen, OneHundredYen, FiftyYen,
+            TenYen, FiveYen, OneYen
+        } = req.body;
+
+        // ✅ ストアドプロシージャを実行
+        const pool = await sql.connect(config);
+        const result = await pool.request()
+            .input('TransactionDate', sql.DateTime2(3), TransactionDate)
+            .input('TransactionType', sql.NVarChar(50), TransactionType)
+            .input('Amount', sql.Int, Amount)
+            .input('Summary', sql.NVarChar(255), Summary)
+            .input('Memo', sql.NVarChar(255), Memo)
+            .input('Recipient', sql.NVarChar(255), Recipient)
+            .input('TenThousandYen', sql.Int, TenThousandYen)
+            .input('FiveThousandYen', sql.Int, FiveThousandYen)
+            .input('OneThousandYen', sql.Int, OneThousandYen)
+            .input('FiveHundredYen', sql.Int, FiveHundredYen)
+            .input('OneHundredYen', sql.Int, OneHundredYen)
+            .input('FiftyYen', sql.Int, FiftyYen)
+            .input('TenYen', sql.Int, TenYen)
+            .input('FiveYen', sql.Int, FiveYen)
+            .input('OneYen', sql.Int, OneYen)
+            .execute('InsertTransactionAndDenomination');
+
+        console.log("✅ データ挿入成功:", result);
+
+        res.status(201).json({ message: "✅ 取引が追加されました" });
+    } catch (err) {
+        console.error("❌ データ挿入エラー:", err);
+        res.status(500).json({ error: "データ登録に失敗しました" });
+    }
+});
+
 app.get("/api/transactions", async (req, res) => {
     try {
         const result = await sql.query(`

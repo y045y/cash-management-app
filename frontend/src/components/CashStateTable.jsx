@@ -100,7 +100,7 @@ const CashStateTable = () => {
       {error && <p style={{ color: "red", textAlign: "center" }}>{error}</p>}
       <table style={{ width: "100%", borderCollapse: "collapse", backgroundColor: "#fff", marginBottom: "20px" }}>
         <thead>
-          <tr style={{ backgroundColor: "#4CAF50", color: "#fff", fontWeight: "bold", fontSize: "24px", textAlign: "center" }}>
+          <tr style={{ backgroundColor: "#4CAF50", color: "#fff", fontWeight: "bold", fontSize: "16px", textAlign: "center" }}>
             <th style={{ padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>金種</th>
             <th style={{ padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>現在枚数</th>
             <th style={{ padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>入力枚数</th>
@@ -109,10 +109,10 @@ const CashStateTable = () => {
         <tbody>
           {Object.entries(cashState).map(([denomination, count]) => (
             <tr key={denomination} style={{ borderBottom: "1px solid #ddd" }}>
-              <td style={{ padding: "10px", textAlign: "center", fontWeight: "bold", fontSize: "24px" }}>
+              <td style={{ padding: "10px", textAlign: "center", fontWeight: "bold", fontSize: "16px" }}>
                 {denominationLabels[denomination]}
               </td>
-              <td style={{ padding: "10px", textAlign: "center", fontWeight: "bold", fontSize: "24px" }}>
+              <td style={{ padding: "10px", textAlign: "center", fontWeight: "bold", fontSize: "16px" }}>
                 {count}
               </td>
               <td style={{ padding: "10px", textAlign: "center" }}>
@@ -130,7 +130,7 @@ const CashStateTable = () => {
                   value={inputCounts[denomination] || ""}
                   onChange={(e) => handleInputChange(denomination, e)}
                   style={{
-                    width: "80px", height: "40px", textAlign: "center", fontSize: "24px", margin: "0 10px"
+                    width: "80px", height: "40px", textAlign: "center", fontSize: "16px", margin: "0 10px"
                   }}
                 />
                 <button
@@ -151,15 +151,15 @@ const CashStateTable = () => {
       {/* 合計金額表示をテーブル外に移動 */}
       <div style={{ textAlign: "right", display: "flex", justifyContent: "right", gap: "40px" }}>
         <div>
-          <h3 style={{ fontWeight: "bold", fontSize: "24px" }}>合計金額</h3>
-          <p style={{ fontSize: "24px" }}>
+          <h3 style={{ fontWeight: "bold", fontSize: "16px" }}>合計金額</h3>
+          <p style={{ fontSize: "16px" }}>
             ¥{calculateTotalAmount().toLocaleString()}
           </p>
         </div>
 
         <div>
-          <h3 style={{ fontWeight: "bold", fontSize: "24px" }}>差額</h3>
-          <p style={{ fontSize: "24px" }}>
+          <h3 style={{ fontWeight: "bold", fontSize: "16px" }}>差額</h3>
+          <p style={{ fontSize: "16px" }}>
             ¥{difference.toLocaleString()}
           </p>
         </div>

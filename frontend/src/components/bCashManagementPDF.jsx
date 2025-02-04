@@ -84,7 +84,7 @@ const CashManagementPDF = ({ history = [], previousCarryOver = {}, currentMonth 
   return (
     <Document>
       <Page style={styles.page} size={{ width: 841.89, height: 595.28 }}>
-        <Text style={styles.title}>金庫管理レポート ({currentMonth}月)</Text>
+        <Text style={styles.title}>金庫管理履歴表 ({currentMonth}月)</Text>
         <Text style={styles.dateTopRight}>{`作成日: ${currentDate}`}</Text>
         <View style={styles.table}>
           <View style={[styles.tableRow, styles.header]}>
