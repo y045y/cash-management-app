@@ -3,10 +3,11 @@
     "version": "1.0.0",
     "description": "Backend & Frontend together",
     "scripts": {
-      "start": "concurrently \"npm run dev --prefix backend\" \"npm start --prefix frontend\""
+        "start": "concurrently \"npm run dev --prefix backend\" \"npm start --prefix frontend\""
     },
     "dependencies": {
-      "concurrently": "^7.6.0"
+        "concurrently": "^7.6.0",
+        "react": "^19.0.0",
+        "react-dom": "^19.0.0"
     }
-  }
-  
+}
