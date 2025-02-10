@@ -1,9 +1,8 @@
-/* App.css */
 body {
   margin: 0;
   font-family: 'Noto Sans JP', sans-serif;
-  background-color: #e0dcdc ; /* 🔹 さらに濃いグレー */
-  color: #e0e0e0; /* 🔹 文字色を明るくして見やすく */
+  background-color: #e0dcdc;
+  color: #333;
   transition: background-color 0.3s, color 0.3s;
 }
 
@@ -12,110 +11,34 @@ body.dark-mode {
   color: #e0e0e0;
 }
 
-.app-container {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-}
-
-.content {
-  display: flex;
-  flex: 1;
-}
-
-.header, .footer {
-  background-color: #333;
-  color: white;
-  padding: 1rem;
-}
-
-body.dark-mode .header, 
-body.dark-mode .footer {
-  background-color: #000;
-  color: #fff;
-}
-
-.sidebar {
-  width: 250px;
-  background-color: #f4f4f4;
-  padding: 1rem;
-}
-
-body.dark-mode .sidebar {
-  background-color: #2c2c2c;
-  color: #e0e0e0;
-}
-
-.main-content {
-  flex: 1;
-  padding: 2rem;
-}
-
-@media (max-width: 768px) {
-  .content {
-      flex-direction: column;
-  }
-
-  .sidebar {
-      width: 100%;
-  }
-}
-
-.container {
-  margin-top: 20px;
-}
-
-.cash-state, .history-table {
-  margin-top: 20px;
-}
-
-.form-group {
-  margin-bottom: 1.5rem;
-}
-
-/* ボタンのスタイル */
-button {
-  pointer-events: auto;
-  opacity: 1;
-  cursor: pointer;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 5px;
-  transition: background-color 0.3s;
-}
-
-button:hover {
-  background-color: #0056b3;
-}
-
-body.dark-mode button {
-  background-color: #444;
-  color: white;
-}
-
-body.dark-mode button:hover {
-  background-color: #666;
-}
-
-/* ✅ テーブル文字色修正 */
+/* ✅ テーブルの文字色 */
 table {
-  width: 100%;
-  border-collapse: collapse;
-  color: #333;
+  color: inherit; /* Bootstrap のデフォルトに戻す */
 }
 
 body.dark-mode table {
   color: #e0e0e0;
 }
 
-th, td {
-  border: 1px solid #ddd;
-  padding: 10px;
-  text-align: center;
+/* ✅ 入力フィールド */
+input, select {
+  color: #333;
+  background-color: white;
 }
-.title {
-  text-align: center;
-  margin-top: 20px;
+
+body.dark-mode input, body.dark-mode select {
+  color: #e0e0e0;
+  background-color: #222;
+}
+
+/* ✅ ボタンのデフォルトを Bootstrap に戻す */
+button {
+  all: unset;
+}
+
+/* ✅ コンテナの背景を白に */
+.container {
+  background-color: white;
+  padding: 20px;
+  border-radius: 10px;
 }

@@ -1,0 +1,18 @@
+/* ✅ テーブルの行間をさらに狭める */
+.cash-state-table td {
+    padding: 4px;  /* Bootstrap のデフォルトより狭く */
+    font-size: 12px; /* 文字を少し小さく */
+}
+
+/* ✅ 入力フィールドをさらに小さく */
+.cash-state-table input {
+    height: 24px;
+    font-size: 12px;
+    width: 50px;
+}
+
+/* ✅ ボタンのサイズを微調整 */
+.cash-state-table .btn {
+    padding: 3px 6px;
+    font-size: 12px;
+}

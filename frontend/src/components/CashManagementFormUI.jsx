@@ -1,140 +1,284 @@
-import React, { useState } from 'react';
-import CashStateTable from './CashStateTable';
-import TransactionHistory from './TransactionHistory';
+import React, { useState, useEffect } from "react";
+import CashStateTable from "./CashStateTable";
+import TransactionHistory from "./TransactionHistory";
+import axios from "axios";
+import "bootstrap/dist/css/bootstrap.min.css";
+import "../styles/cashManagementForm.css";
 
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 const CashManagementFormUI = () => {
-    const [form, setForm] = useState({
-        date: '',
-        transactionFlow: '入金',
-        amount: '',
-        transactionType: '清算',
-        description: '交通費',
-        recipient: 'なし',
-        memo: ''
-    });
+    const [difference, setDifference] = useState(0); 
     const [loading, setLoading] = useState(false);
+    const [transactions, setTransactions] = useState([]);
+    const [inputCounts, setInputCounts] = useState({});
+    const [cashState, setCashState] = useState({});
 
-    const handleInputChange = (field, value) => {
-        setForm((prev) => ({ ...prev, [field]: value }));
-    };
+    const [form, setForm] = useState({
+        date: "",
+        amount: 0,
+        transactionType: "出金",
+        summary: "交通費",
+        recipient: "なし",
+        memo: "",
+    });
 
-    // const addHistory = () => {
-    //     setLoading(true);
-    //     setTimeout(() => {
-    //         console.log("保存されたデータ", form);
-    //         setLoading(false);
-    //     }, 1000);
-    // };
-    const handleSubmit = async () => {
-        const data = {
-            TransactionDate: new Date().toISOString(), // YYYY-MM-DDTHH:MM:SS.sssZ 形式
-            TransactionType: form.transactionType,
-            Amount: form.amount,
-            Summary: form.description,
-            Memo: form.memo,
-            Recipient: form.recipient,
-            // ✅ 金種の情報をフォームから取得するように修正
-            TenThousandYen: form.tenThousandYen || 0,
-            FiveThousandYen: form.fiveThousandYen || 0,
-            OneThousandYen: form.oneThousandYen || 0,
-            FiveHundredYen: form.fiveHundredYen || 0,
-            OneHundredYen: form.oneHundredYen || 0,
-            FiftyYen: form.fiftyYen || 0,
-            TenYen: form.tenYen || 0,
-            FiveYen: form.fiveYen || 0,
-            OneYen: form.oneYen || 0
-        };
-    
-        console.log("送信するデータ:", data); // ✅ 送信データを確認
-    
+    const fetchTransactions = async () => {
         try {
-            setLoading(true);  // ✅ ローディング開始
-            const response = await fetch('/api/insert-transaction', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            });
+            const startDate = new Date();
+            startDate.setMonth(startDate.getMonth() - 1); // 先月も含める
+            startDate.setDate(1); // 先月の1日から取得
     
-            if (response.ok) {
-                alert('データが正常に保存されました！');
+            const endDate = new Date().toISOString().slice(0, 10); // 今日の日付
+    
+            const response = await axios.get(`${API_URL}/api/transaction-history?startDate=${startDate.toISOString().slice(0, 10)}&endDate=${endDate}`);
+    
+            console.log("📌 取得した取引履歴:", response.data.transactions);
+    
+            setTransactions(response.data.transactions || []);
+        } catch (error) {
+            console.error("❌ 取引履歴取得エラー:", error);
+        }
+    };
+    
+
+    const fetchCashState = async () => {
+        try {
+            const response = await axios.get(`${API_URL}/api/current-inventory`, { timeout: 10000 });
+    
+            if (response.status === 200 && response.data) {
+                console.log("📌 取得した金庫状態:", response.data);
+                setCashState(response.data);
             } else {
-                alert('エラーが発生しました');
+                console.error("⚠️ 金庫状態の取得に失敗しました。レスポンス:", response);
             }
         } catch (error) {
-            console.error('エラー:', error);
+            console.error("❌ 金庫状態取得エラー:", error);
+        }
+    };
+    
+    useEffect(() => {
+        fetchTransactions();
+        fetchCashState();
+    }, []);
+        // 🔹 取引履歴が更新されたらログを出力
+   
+    useEffect(() => {
+        console.log("📌 取引履歴が更新されました:", transactions);
+    }, [transactions]);
+    
+        // 🔹 金庫状態が更新されたらログを出力
+    useEffect(() => {
+            console.log("📌 現在の金庫状態が更新されました:", cashState);
+    }, [cashState]);
+
+    const handleSubmit = async () => {
+        const transactionAmount = isNaN(difference) ? 0 : 
+            (form.transactionType === "出金" ? -Math.abs(difference) : Math.abs(difference));
+    
+        const correctedAmount = Math.abs(form.amount);
+    
+        if (Math.abs(transactionAmount) !== correctedAmount) {
+            alert(`エラー: 入力金額 (${correctedAmount}) と 差額 (${transactionAmount}) が一致しません！`);
+            return;
+        }
+    
+        console.log("📌 送信前のデータ:", { ...form, Amount: transactionAmount });
+    
+        const data = {
+            TransactionDate: form.date,
+            TransactionType: form.transactionType,
+            Amount: transactionAmount,
+            Summary: form.summary,
+            Memo: form.memo,
+            Recipient: form.recipient,
+            TenThousandYen: inputCounts.TenThousandYen || 0,
+            FiveThousandYen: inputCounts.FiveThousandYen || 0,
+            OneThousandYen: inputCounts.OneThousandYen || 0,
+            FiveHundredYen: inputCounts.FiveHundredYen || 0,
+            OneHundredYen: inputCounts.OneHundredYen || 0,
+            FiftyYen: inputCounts.FiftyYen || 0,
+            TenYen: inputCounts.TenYen || 0,
+            FiveYen: inputCounts.FiveYen || 0,
+            OneYen: inputCounts.OneYen || 0,
+        };
+        
+        console.log("📌 API に送信するデータ:", data);
+    
+        try {
+            setLoading(true);
+            const response = await axios.post(`${API_URL}/api/insert-transaction`, data);
+    
+            console.log("📌 API レスポンス:", response.data);
+    
+            if (response.status === 200 && response.data.data.length > 0) {
+                alert("データが正常に保存されました！");
+    
+                console.log("📌 追加する取引データ:", response.data.data[0]);
+    
+                // ✅ 最新の取引履歴と金庫状態を取得 (同期的に実行)
+                await fetchTransactions();  // ここでしっかりデータ取得を待つ
+                await fetchCashState();     // 金庫状態も取得
+    
+                // ✅ 手動で最新データをセット (フロントエンドのUI反映)
+                setTransactions(prev => {
+                    const updatedTransactions = [...prev, response.data.data[0]];
+                    console.log("📌 更新後の取引履歴:", updatedTransactions);
+                    return updatedTransactions;
+                });
+    
+                setCashState(prev => {
+                    const updatedCashState = { ...prev, ...response.data.data[0] };
+                    console.log("📌 更新後の金庫状態:", updatedCashState);
+                    return updatedCashState;
+                });
+    
+                setForm({
+                    date: "",
+                    amount: 0,
+                    transactionType: "出金",
+                    summary: "交通費",
+                    recipient: "なし",
+                    memo: "",
+                });
+    
+                setInputCounts({});
+            } else {
+                alert("エラーが発生しました");
+            }
+        } catch (error) {
+            console.error("❌ エラー:", error);
         } finally {
-            setLoading(false);  // ✅ ローディング終了
+            setLoading(false);
         }
     };
     
     
+    // ✅ 取引履歴の変化を監視
+    useEffect(() => {
+        console.log("📌 取引履歴が更新されました:", transactions);
+    }, [transactions]);
+    
+    // ✅ 現在の金庫状態の変化を監視
+    useEffect(() => {
+        console.log("📌 現在の金庫状態が更新されました:", cashState);
+    }, [cashState]);
+    
 
     return (
-        <div className="cash-management" style={{ padding: '10px', maxWidth: '800px', margin: 'auto', fontFamily: 'Arial, sans-serif' }}>
-            <div className="form-row d-flex" style={{ gap: '8px', display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap' }}>
-                
-                <div className="form-group" style={{ flex: '1' }}>
-                    <label htmlFor="dateInput">日付</label>
-                    <input id="dateInput" type="date" value={form.date} onChange={(e) => handleInputChange('date', e.target.value)} className="form-control" />
+        <div className="container mt-4 p-3 bg-light rounded shadow-sm">
+            {/* タイトル */}
+            <h3 className="text-center mb-3">金庫管理システム</h3>
+
+            {/* フォーム入力エリア */}
+            <form>
+                <div className="row g-3 align-items-center">
+
+                    {/* 日付入力 */}
+                    <div className="col-md-2">
+                        <label className="form-label fw-bold">日付</label>
+                        <input
+                            type="date"
+                            value={form.date}
+                            onChange={(e) => setForm({ ...form, date: e.target.value })}
+                            className="form-control"
+                        />
+                    </div>
+
+                    {/* 取引タイプ */}
+                    <div className="col-md-2">
+                        <label className="form-label fw-bold">取引タイプ</label>
+                        <select
+                            value={form.transactionType}
+                            onChange={(e) => {
+                                const newTransactionType = e.target.value;
+                                console.log("📌 取引タイプ変更:", newTransactionType); // 🔹 ここでログを出力
+                                setForm({ ...form, transactionType: newTransactionType });
+                            }}
+                            className="form-select"
+                        >
+                            <option value="出金">出金</option>
+                            <option value="入金">入金</option>
+                        </select>
+                    </div>
+
+                    {/* 金額入力 */}
+                    <div className="col-md-2">
+                        <label className="form-label fw-bold">金額</label>
+                        <input
+                            type="number"
+                            value={form.amount}
+                            onChange={(e) => setForm({ ...form, amount: Number(e.target.value) })}
+                            className="form-control"
+                            placeholder="金額を入力"
+                        />
+                    </div>
+
+                    {/* 取引先 */}
+                    <div className="col-md-2">
+                        <label className="form-label fw-bold">取引先</label>
+                        <select
+                            value={form.recipient}
+                            onChange={(e) => setForm({ ...form, recipient: e.target.value })}
+                            className="form-select"
+                        >
+                            <option value="なし">なし</option>
+                            <option value="取引先A">取引先A</option>
+                            <option value="取引先B">取引先B</option>
+                        </select>
+                    </div>
+
+                    {/* 摘要 */}
+                    <div className="col-md-2">
+                        <label className="form-label fw-bold">摘要</label>
+                        <select
+                            value={form.summary}
+                            onChange={(e) => setForm({ ...form, summary: e.target.value })}
+                            className="form-select"
+                        >
+                            <option value="交通費">交通費</option>
+                            <option value="食費">食費</option>
+                            <option value="雑費">雑費</option>
+                        </select>
+                    </div>
+
+                    {/* メモ */}
+                    <div className="col-md-2">
+                        <label className="form-label fw-bold">メモ</label>
+                        <input
+                            type="text"
+                            value={form.memo}
+                            onChange={(e) => setForm({ ...form, memo: e.target.value })}
+                            className="form-control"
+                            placeholder="メモを入力"
+                        />
+                    </div>
                 </div>
-                <div className="form-group" style={{ flex: '1' }}>
-                    <label htmlFor="transactionFlowSelect">入出金</label>
-                    <select id="transactionFlowSelect" value={form.transactionFlow} onChange={(e) => handleInputChange('transactionFlow', e.target.value)} className="form-control">
-                        <option value="入金">入金</option>
-                        <option value="出金">出金</option>
-                    </select>
-                </div>
-                <div className="form-group" style={{ flex: '1' }}>
-                    <label htmlFor="amountInput">金額</label>
-                    <input id="amountInput" type="number" value={form.amount} onChange={(e) => handleInputChange('amount', e.target.value)} className="form-control" />
-                </div>
-                <div className="form-group" style={{ flex: '1' }}>
-                    <label htmlFor="transactionTypeSelect">処理内容</label>
-                    <select id="transactionTypeSelect" value={form.transactionType} onChange={(e) => handleInputChange('transactionType', e.target.value)} className="form-control">
-                        <option value="清算">清算</option>
-                        <option value="支払">支払</option>
-                        <option value="仮払">仮払</option>
-                        <option value="仮払清算">仮払清算</option>
-                        <option value="立替">立替</option>
-                        <option value="両替">両替</option>
-                        <option value="入金">入金</option>
-                        <option value="調整">調整</option>
-                    </select>
-                </div>
-                <div className="form-group" style={{ flex: '1' }}>
-                    <label htmlFor="descriptionSelect">摘要</label>
-                    <input id="descriptionSelect" type="text" value={form.description} onChange={(e) => handleInputChange('description', e.target.value)} className="form-control" />
-                </div>
-                <div className="form-group" style={{ flex: '1' }}>
-                    <label htmlFor="recipientSelect">相手</label>
-                    <input id="recipientSelect" type="text" value={form.recipient} onChange={(e) => handleInputChange('recipient', e.target.value)} className="form-control" />
-                </div>
-                <div className="form-group" style={{ flex: '2' }}>
-                    <label htmlFor="memoInput">メモ</label>
-                    <input id="memoInput" type="text" value={form.memo} onChange={(e) => handleInputChange('memo', e.target.value)} className="form-control" />
-                </div>
+            </form>
+
+            {/* ✅ 金種入力テーブル */}
+            <CashStateTable 
+                inputCounts={inputCounts} 
+                cashState={cashState} 
+                fetchCashState={fetchCashState} 
+                setInputCounts={setInputCounts} 
+                setDifference={setDifference} 
+            />
+
+            {/* 保存ボタン */}
+            <div className="text-end mt-3">
+                <button className="btn btn-primary px-4" onClick={handleSubmit} disabled={loading}>
+                    {loading ? "処理中..." : "保存"}
+                </button>
             </div>
-              {/* 金種テーブル */}
-              <div style={{ marginBottom: '5px' }}>
-                
-              </div>
-              <CashStateTable />
 
-              <div style={{ textAlign: "right" }}>
-              <button
-    className="btn btn-primary"
-    onClick={handleSubmit}  // ✅ ここを変更
-    disabled={loading}
->
-    {loading ? "処理中..." : "保存"}
-</button>
-
-
-            {/* 取引履歴（幅を広くする） */}
-         
-             <TransactionHistory />
-            
+           {/* ✅ 取引履歴テーブル */}
+            <div className="mt-4">
+                <TransactionHistory 
+                    transactions={transactions} 
+                    fetchTransactions={fetchTransactions}  
+                    fetchCashState={fetchCashState} 
+                />
             </div>
         </div>
     );

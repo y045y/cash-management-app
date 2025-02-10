@@ -69,6 +69,7 @@ const styles = StyleSheet.create({
 });
 
 const CashManagementPDF = ({ history = [], previousCarryOver = {}, currentMonth }) => {
+  console.log("📌 取引履歴データ:", JSON.stringify(history, null, 2));
   const formatNumber = (number) => (number != null ? new Intl.NumberFormat('ja-JP').format(number) : '0');
   const formatDate = (dateString) => {
     if (!dateString) return "";
@@ -126,8 +127,17 @@ const CashManagementPDF = ({ history = [], previousCarryOver = {}, currentMonth 
           {history.map((item, index) => (
             <View key={index} style={styles.tableRow}>
             <Text style={[styles.tableCellLeft, styles.dateCell]}>{formatDate(item.TransactionDate)}</Text>
-            <Text style={[styles.tableCellRight, styles.depositCell]}>{item.TransactionType === '入金' ? formatNumber(item.Amount || 0) : ''}</Text>
-            <Text style={[styles.tableCellRight, styles.withdrawalCell]}>{item.TransactionType === '出金' ? formatNumber(item.Amount || 0) : ''}</Text>
+              {/* ✅ 入金時に入金の列に表示する */}
+        <Text style={[styles.tableCellRight, styles.depositCell]}>
+          {(item.TransactionType === "入金" || item.TransactionType === "Deposit") ? formatNumber(item.Amount ?? 0) : ""}
+        </Text>
+
+        {/* ✅ 出金時に出金の列に表示する */}
+        <Text style={[styles.tableCellRight, styles.withdrawalCell]}>
+          {(item.TransactionType === "出金" || item.TransactionType === "Withdrawal") ? formatNumber(item.Amount ?? 0) : ""}
+        </Text>
+             {/* <Text style={[styles.tableCellRight, styles.depositCell]}>{item.TransactionType === '入金' ? formatNumber(item.Amount || 0) : ''}</Text>
+            <Text style={[styles.tableCellRight, styles.withdrawalCell]}>{item.TransactionType === '出金' ? formatNumber(item.Amount || 0) : ''}</Text> */}
               {/* <Text style={[styles.tableCellRight, styles.amountCell]}>{formatNumber(item.Amount || 0)}</Text> */}
               <Text style={[styles.tableCellRight, styles.balanceCell]}>{formatNumber(item.RunningBalance || 0)}</Text>
               <Text style={[styles.tableCellLeft, styles.recipientCell]}>{item.Recipient}</Text>

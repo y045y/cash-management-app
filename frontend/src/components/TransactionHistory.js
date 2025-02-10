@@ -1,129 +1,172 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import PDFButton from "./PDFButton";
+import PDFButton from "./PDFButton"; // ✅ PDFダウンロードボタンを追加
+import "bootstrap/dist/css/bootstrap.min.css"; // ✅ Bootstrap を適用
 
-const TransactionHistory = () => {
-  const [transactions, setTransactions] = useState([]);
-  const [currentMonth, setCurrentMonth] = useState(new Date().toISOString().slice(0, 7));
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
-  useEffect(() => {
-    fetchTransactions();
-  }, [currentMonth]);
+const TransactionHistory = ({ fetchTransactions, fetchCashState }) => {
+    const [transactions, setTransactions] = useState([]);
+    const [currentMonth, setCurrentMonth] = useState(new Date().toISOString().slice(0, 7));
+    const [error, setError] = useState(null);
 
-  const fetchTransactions = async () => {
-    try {
-      const response = await axios.get(`http://localhost:5000/api/transaction-history?startDate=${currentMonth}-01`);
-      console.log("📌 取得したデータ:", response.data);
-      setTransactions(response.data.transactions || []);
-    } catch (error) {
-      console.error("❌ 取引履歴取得エラー:", error);
-    }
-  };
+    // ✅ 取引履歴を取得
+    const fetchTransactionsData = async (retryCount = 3) => {
+        try {
+            const response = await axios.get(`${API_URL}/api/transaction-history?startDate=${currentMonth}-01`, { timeout: 10000 });
+            console.log("📌 取得したデータ:", response.data);
 
-  return (
-    <div style={{ textAlign: "center" }}> {/* ✅ 全体を中央寄せ */}
+            if (response.data && response.data.transactions) {
+                setTransactions(response.data.transactions);
+            } else {
+                setTransactions([]);
+                setError("データが取得できませんでした。");
+            }
+        } catch (error) {
+            console.error("❌ 取引履歴取得エラー:", error);
+            if (retryCount > 0) {
+                console.warn(`リトライ中... 残り ${retryCount} 回`);
+                setTimeout(() => fetchTransactionsData(retryCount - 1), 2000);
+            } else {
+                setError("取引履歴の取得に失敗しました。サーバーを確認してください。");
+            }
+        }
+    };
 
-      {/* 🔄 月切り替えボタン + PDFダウンロードを右寄せ */}
-      <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px" }}>
-        <button
-          className="btn btn-outline-primary"
-          onClick={() => setCurrentMonth(prev => new Date(new Date(prev + "-01").setMonth(new Date(prev + "-01").getMonth() - 1)).toISOString().slice(0, 7))}
-        >
-          前月
-        </button>
-        <button
-          className="btn btn-outline-secondary"
-          onClick={() => setCurrentMonth(new Date().toISOString().slice(0, 7))}
-        >
-          当月
-        </button>
-        <button
-          className="btn btn-outline-primary"
-          onClick={() => setCurrentMonth(prev => new Date(new Date(prev + "-01").setMonth(new Date(prev + "-01").getMonth() + 1)).toISOString().slice(0, 7))}
-        >
-          次月
-        </button>
-        <PDFButton transactions={transactions} currentMonth={currentMonth} />
-      </div>
+    useEffect(() => {
+        fetchTransactionsData();
+    }, [currentMonth]);
 
-      {/* ✅ 取引履歴テーブル */}
-      <table className="table table-bordered text-center" style={{ fontSize: "12px", margin: "10px auto", maxWidth: "900px" }}>
-        <thead className="table-dark">
-          <tr>
-            <th>日付</th>
-            <th>入金</th>
-            <th>出金</th>
-            <th>残高</th>
-            <th>相手</th>
-            <th>摘要</th>
-            <th>メモ</th>
-            <th>万</th>
-            <th>5千</th>
-            <th>千</th>
-            <th>5百</th>
-            <th>百</th>
-            <th>5十</th>
-            <th>十</th>
-            <th>5</th>
-            <th>1</th>
-          </tr>
-        </thead>
-        <tbody>
-          {/* ✅ 繰越データを最初の行に表示 */}
-          {transactions.length > 0 && (
-            <tr>
-              <td>繰</td>
-              <td></td>
-              <td></td>
-              <td className="text-end">{transactions[0].RunningBalance.toLocaleString()}</td>
-              <td></td>
-              <td></td>
-              <td></td>
-              <td className="text-end">{transactions[0].TenThousandYen || 0}</td>
-              <td className="text-end">{transactions[0].FiveThousandYen || 0}</td>
-              <td className="text-end">{transactions[0].OneThousandYen || 0}</td>
-              <td className="text-end">{transactions[0].FiveHundredYen || 0}</td>
-              <td className="text-end">{transactions[0].OneHundredYen || 0}</td>
-              <td className="text-end">{transactions[0].FiftyYen || 0}</td>
-              <td className="text-end">{transactions[0].TenYen || 0}</td>
-              <td className="text-end">{transactions[0].FiveYen || 0}</td>
-              <td className="text-end">{transactions[0].OneYen || 0}</td>
-            </tr>
-          )}
+    const handleDelete = async (transactionId) => {
+        if (!transactionId) {
+            console.error("❌ 削除エラー: TransactionID が `undefined` です。");
+            alert("エラー: 削除する取引IDが取得できませんでした。");
+            return;
+        }
+    
+        console.log("🗑 削除リクエスト送信:", transactionId);
+    
+        if (!window.confirm("この取引を削除しますか？")) return;
+    
+        try {
+            const response = await axios.delete(`${API_URL}/api/transactions/${transactionId}`);
+    
+            if (response.status === 200) {
+                alert("取引が削除されました！");
+    
+                console.log("📌 fetchTransactions を実行");
+                await fetchTransactions(); // ✅ 取引履歴の更新
+                
+                if (typeof fetchCashState === "function") {
+                    console.log("📌 fetchCashState を実行");
+                    await fetchCashState(); // ✅ 金庫状態の更新
+                } else {
+                    console.warn("⚠ fetchCashState が未定義のため、金庫状態を更新できません。");
+                }
+            } else {
+                alert("削除に失敗しました。");
+            }
+        } catch (error) {
+            console.error("❌ 削除エラー:", error);
+            alert("エラーが発生しました。");
+        }
+    };
+    
+    
+    
+    return (
+        <div className="container">
+            {error && <p className="text-danger text-center">{error}</p>}
 
-          {/* ✅ 取引データの表示 */}
-          {transactions.length > 0 ? (
-            transactions.slice(1).map((tx, index) => (
-              <tr key={index}>
-                {/* 📌 日付フォーマットを "2/5" 形式に変更 */}
-                <td>{tx.TransactionDate ? new Date(tx.TransactionDate).toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" }) : "現"}</td>
+            {/* ✅ 月選択ボタン & PDFダウンロード */}
+            <div className="d-flex justify-content-between align-items-center my-3">
+                <div>
+                    <button className="btn btn-outline-primary me-2" onClick={() => setCurrentMonth(prev => 
+                        new Date(new Date(prev + "-01").setMonth(new Date(prev + "-01").getMonth() - 1)).toISOString().slice(0, 7))
+                    }>
+                        ◀ 前月
+                    </button>
+                    <button className="btn btn-outline-secondary me-2" onClick={() => setCurrentMonth(new Date().toISOString().slice(0, 7))}>
+                        📅 当月
+                    </button>
+                    <button className="btn btn-outline-primary" onClick={() => setCurrentMonth(prev => 
+                        new Date(new Date(prev + "-01").setMonth(new Date(prev + "-01").getMonth() + 1)).toISOString().slice(0, 7))
+                    }>
+                        次月 ▶
+                    </button>
+                </div>
+                {/* ✅ PDFダウンロードボタン */}
+                <PDFButton transactions={transactions} currentMonth={currentMonth} />
+            </div>
 
-                <td className="text-end">{tx.TransactionType === "入金" ? tx.Amount.toLocaleString() : ""}</td>
-                <td className="text-end">{tx.TransactionType === "出金" ? tx.Amount.toLocaleString() : ""}</td>
-                <td className="text-end">{tx.RunningBalance !== null ? tx.RunningBalance.toLocaleString() : "N/A"}</td>
-                <td className="text-start">{tx.Recipient || ""}</td>
-                <td className="text-start">{tx.Summary || ""}</td>
-                <td className="text-start">{tx.Memo || ""}</td>
-                <td className="text-end">{tx.TenThousandYen || 0}</td>
-                <td className="text-end">{tx.FiveThousandYen || 0}</td>
-                <td className="text-end">{tx.OneThousandYen || 0}</td>
-                <td className="text-end">{tx.FiveHundredYen || 0}</td>
-                <td className="text-end">{tx.OneHundredYen || 0}</td>
-                <td className="text-end">{tx.FiftyYen || 0}</td>
-                <td className="text-end">{tx.TenYen || 0}</td>
-                <td className="text-end">{tx.FiveYen || 0}</td>
-                <td className="text-end">{tx.OneYen || 0}</td>
-              </tr>
-            ))
-          ) : (
-            <tr>
-              <td colSpan="16" className="text-center">取引データなし</td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-    </div>
-  );
+            {/* ✅ 取引履歴テーブル */}
+            <div className="table-responsive">
+                <table className="table table-striped table-hover table-bordered text-center align-middle">
+                    <thead className="table-dark">
+                        <tr>
+                            <th>日付</th>
+                            <th>金額</th>
+                            <th>残高</th>
+                            <th>相手</th>
+                            <th>摘要</th>
+                            <th>メモ</th>
+                            <th>万</th>
+                            <th>5千</th>
+                            <th>千</th>
+                            <th>5百</th>
+                            <th>百</th>
+                            <th>5十</th>
+                            <th>十</th>
+                            <th>5</th>
+                            <th>1</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {transactions.length > 0 ? (
+                            transactions.map((tx, index) => (
+                                <tr key={index}>
+                                    <td>{tx.TransactionDate ? new Date(tx.TransactionDate).toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" }) : "N/A"}</td>
+                                    <td className="text-end">{tx.Amount !== null ? `${tx.Amount < 0 ? "-" : ""}${Math.abs(tx.Amount).toLocaleString()}` : "N/A"}</td>
+                                    <td className="text-end">{tx.RunningBalance !== null ? `${tx.RunningBalance.toLocaleString()}` : "N/A"}</td>
+                                    <td className="text-start">{tx.Recipient || ""}</td>
+                                    <td className="text-start">{tx.Summary || ""}</td>
+                                    <td className="text-start">{tx.Memo || ""}</td>
+                                    <td className="text-end">{tx.TenThousandYen || 0}</td>
+                                    <td className="text-end">{tx.FiveThousandYen || 0}</td>
+                                    <td className="text-end">{tx.OneThousandYen || 0}</td>
+                                    <td className="text-end">{tx.FiveHundredYen || 0}</td>
+                                    <td className="text-end">{tx.OneHundredYen || 0}</td>
+                                    <td className="text-end">{tx.FiftyYen || 0}</td>
+                                    <td className="text-end">{tx.TenYen || 0}</td>
+                                    <td className="text-end">{tx.FiveYen || 0}</td>
+                                    <td className="text-end">{tx.OneYen || 0}</td>
+                                    <td>
+    <button 
+        className="btn btn-sm btn-danger" 
+        onClick={() => {
+            console.log("🛠 削除しようとしている取引データ:", tx); // 🔍 `tx` のデータを確認
+            console.log("🛠 削除対象の TransactionID:", tx.TransactionID); // 🔍 `TransactionID` が正しいか確認
+            handleDelete(tx.TransactionID);
+        }}
+    >
+        🗑 削除
+    </button>
+</td>
+
+
+                                </tr>
+                            ))
+                        ) : (
+                            <tr>
+                                <td colSpan="16" className="text-center">取引データなし</td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
 };
 
 export default TransactionHistory;
