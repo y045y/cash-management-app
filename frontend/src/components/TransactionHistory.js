@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import PDFButton from "./PDFButton"; // ✅ PDFダウンロードボタンを追加
 import "bootstrap/dist/css/bootstrap.min.css"; // ✅ Bootstrap を適用
@@ -10,12 +10,13 @@ const TransactionHistory = ({ fetchTransactions, fetchCashState }) => {
     const [currentMonth, setCurrentMonth] = useState(new Date().toISOString().slice(0, 7));
     const [error, setError] = useState(null);
 
-    // ✅ 取引履歴を取得
-    const fetchTransactionsData = async (retryCount = 3) => {
+
+    // ✅ `useCallback` を使用して関数をメモ化
+    const fetchTransactionsData = useCallback(async (retryCount = 3) => {
         try {
             const response = await axios.get(`${API_URL}/api/transaction-history?startDate=${currentMonth}-01`, { timeout: 10000 });
             console.log("📌 取得したデータ:", response.data);
-
+    
             if (response.data && response.data.transactions) {
                 setTransactions(response.data.transactions);
             } else {
@@ -31,11 +32,13 @@ const TransactionHistory = ({ fetchTransactions, fetchCashState }) => {
                 setError("取引履歴の取得に失敗しました。サーバーを確認してください。");
             }
         }
-    };
-
+    }, [currentMonth, setTransactions, setError]);  // 🔥 `currentMonth`, `setTransactions`, `setError` を依存配列に追加
+    
+    // ✅ `fetchTransactionsData` を `useEffect` の依存配列に含める
     useEffect(() => {
         fetchTransactionsData();
-    }, [currentMonth]);
+    }, [fetchTransactionsData]);  // 🔥 `fetchTransactionsData` を依存配列に含める
+    
 
     const handleDelete = async (transactionId) => {
         if (!transactionId) {

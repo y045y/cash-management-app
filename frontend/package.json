@@ -1,5 +1,5 @@
 {
-  "name": "my-app",
+  "name": "frontend",
   "version": "0.1.0",
   "private": true,
   "description": "A React application for cash management",
@@ -32,6 +32,7 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
+    "postbuild": "rm -rf ../backend/build && mv build ../backend/",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
@@ -54,13 +55,13 @@
     ]
   },
   "engines": {
-    "node": ">=14.0.0",
+    "node": ">=18.0.0",
     "npm": ">=6.0.0"
   },
   "jest": {
     "verbose": true,
     "testEnvironment": "jsdom"
   },
-  "homepage": "https://cashmanegement-backend.azurewebsites.net/",
-  "proxy": "https://cashmanegement-backend.azurewebsites.net/"
+  "homepage": "https://cashmanagement-frontend.azurewebsites.net/",
+  "proxy": "https://cashmanagement-backend.azurewebsites.net/api"
 }

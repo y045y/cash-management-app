@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "../styles/cashStateTable.css"; // ✅ カスタム CSS を適用
@@ -51,11 +51,11 @@ const CashStateTable = ({ inputCounts, setInputCounts, setDifference }) => {
     };
 
     // ✅ 金庫の現在状態を取得
-    const fetchCashState = async () => {
+    const fetchCashState = useCallback(async () => {
         try {
             const response = await axios.get(`${API_URL}/api/current-inventory`, { timeout: 10000 });
             if (response.data) {
-                setCashState(mapCashStateKeys(response.data)); // 👈 変換後のデータをセット
+                setCashState(mapCashStateKeys(response.data));  // 🔹 変換後のデータをセット
                 console.log("📌 更新後の金庫状態 (setCashState):", mapCashStateKeys(response.data));
             } else {
                 setCashState({});
@@ -65,11 +65,12 @@ const CashStateTable = ({ inputCounts, setInputCounts, setDifference }) => {
             console.error("❌ 金庫状態取得エラー:", error);
             setError("金庫状態の取得に失敗しました。");
         }
-    };
+    }, [setCashState]);  // 🔥 `useCallback` に `setCashState` を依存配列として追加
 
+    // ✅ `fetchCashState` を `useEffect` の依存関係に入れても大丈夫
     useEffect(() => {
         fetchCashState();
-    }, []);
+    }, [fetchCashState]);  
 
     // ✅ 現在の金額を計算（金種 × 現在枚数）
     const calculateTotalAmount = () => {
@@ -80,20 +81,21 @@ const CashStateTable = ({ inputCounts, setInputCounts, setDifference }) => {
     };
 
     // ✅ 入力金額の計算
-    const calculateInputAmount = () => {
+    const calculateInputAmount = useCallback(() => {
         const total = Object.entries(inputCounts).reduce(
             (sum, [denomination, count]) => sum + (denominationValues[denomination] || 0) * (count || 0),
             0
         );
-
+    
         console.log("📌 計算した差額 (difference):", total);
         return total;
-    };
-
-    // ✅ 入力金額を計算して `setDifference` にセット（親コンポーネントに渡す）
+    }, [inputCounts]);  // 🔹 `inputCounts` に依存
+    
+    // ✅ `calculateInputAmount` を `useEffect` の依存配列に入れても安全になる
     useEffect(() => {
         setDifference(calculateInputAmount());
-    }, [inputCounts, setDifference]);
+    }, [calculateInputAmount, setDifference]);  // 🔥 `calculateInputAmount` を依存配列に追加
+    
 
     // ✅ 金種の増減ボタン
     const adjustCount = (denomination, delta) => {
