@@ -32,8 +32,10 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "postbuild": "rm -rf ../backend/build && mv build ../backend/",
-    "test": "react-scripts test",
+"postbuild": "powershell -Command \"Remove-Item -Recurse -Force ../backend/build; Move-Item -Path build -Destination ../backend/\""
+
+
+   , "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {

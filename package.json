@@ -3,7 +3,9 @@
     "version": "1.0.0",
     "description": "Backend & Frontend together",
     "scripts": {
-        "start": "concurrently \"npm run dev --prefix backend\" \"npm start --prefix frontend\""
+        "start": "concurrently \"npm run dev --prefix backend\" \"npm start --prefix frontend\"",
+       "postbuild": "rmdir /s /q ../backend/build && move build ../backend/"
+        
     },
     "dependencies": {
         "concurrently": "^7.6.0",
