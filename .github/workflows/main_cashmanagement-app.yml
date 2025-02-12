@@ -1,72 +1,68 @@
-# Azure Web Apps への backend のみデプロイ
-# 参考: https://github.com/Azure/webapps-deploy
+# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
+# More GitHub Actions for Azure: https://github.com/Azure/actions
 
-name: Deploy backend to Azure Web App - CashManagement-App
+name: Build and deploy Node.js app to Azure Web App - CashManagement-App
 
 on:
   push:
     branches:
-      - main  # mainブランチに push されたらデプロイ
-  workflow_dispatch:  # 手動実行可能
+      - main
+  workflow_dispatch:
 
 jobs:
-  build-backend:
-    runs-on: ubuntu-latest
+  build:
+    runs-on: windows-latest
     permissions:
-      contents: read  # actions/checkout に必要
+      contents: read #This is required for actions/checkout
 
     steps:
-      - name: 📥 GitHub リポジトリをクローン
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: 🔧 Node.js 環境をセットアップ
+      - name: Set up Node.js version
         uses: actions/setup-node@v3
         with:
           node-version: '20.x'
-          cache: 'npm'
 
-      - name: 📦 依存関係をインストール (backend のみ)
+      - name: npm install, build, and test
         run: |
-          cd backend
           npm install
-
-      - name: 📤 backend をアップロード (アーティファクト)
+          npm run build --if-present
+          npm run test --if-present
+      
+      - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
-          name: backend-app
-          path: backend
+          name: node-app
+          path: .
 
-  deploy-backend:
+  deploy:
     runs-on: ubuntu-latest
-    needs: build-backend
+    needs: build
     environment:
-      name: 'production'
+      name: 'Production'
       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
-
     permissions:
-      id-token: write  # JWT の発行に必要
-      contents: read  # actions/checkout に必要
+      id-token: write #This is required for requesting the JWT
+      contents: read #This is required for actions/checkout
 
     steps:
-      - name: 📥 backend のビルド成果物をダウンロード
+      - name: Download artifact from build job
         uses: actions/download-artifact@v4
         with:
-          name: backend-app
-
-      - name: 🔑 Azure にログイン
+          name: node-app
+      
+      - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_A9508A12D1CA49719F1121E7274E5015 }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_1FEBFE0054DE4F28B333D0212057B312 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_CC0F116E634D492384C7D5C91F6E9145 }}
 
-      - name: 🚀 backend を Azure Web Apps へデプロイ
+      - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v3
         id: deploy-to-webapp
         with:
-          app-name: 'CashManagement-App'  # Azure上のWebアプリ名
-          slot-name: 'production'
-          package: ./backend  # backend のみをデプロイ
-
-      - name: ✅ デプロイ完了メッセージ
-        run: echo "🎉 Azure Web App 'CashManagement-App' に backend のみデプロイ完了！"
+          app-name: 'CashManagement-App'
+          slot-name: 'Production'
+          package: .
+          
