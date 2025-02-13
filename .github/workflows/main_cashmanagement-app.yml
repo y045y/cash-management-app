@@ -36,12 +36,11 @@ jobs:
           npm run build
 
       # buildフォルダをbackendに移す作業は「frontend/package.jsonのpostbuild」で実施する前提
-      # YAML側では何もしない
 
-      - name: Zip Backend Directory for Deployment
+      - name: Zip Necessary Backend Files for Deployment (node_modules除外)
         run: |
           cd backend
-          zip -r ../release.zip ./
+          zip -r ../release.zip build server.js package.json package-lock.json
 
       - name: Upload Artifact for Deployment Job
         uses: actions/upload-artifact@v4
