@@ -34,8 +34,9 @@ jobs:
           cd frontend
           npm install
           npm run build
-          rm -rf ../backend/build
-          mv build ../backend/
+
+      # buildフォルダをbackendに移す作業は「frontend/package.jsonのpostbuild」で実施する前提
+      # YAML側では何もしない
 
       - name: Zip Backend Directory for Deployment
         run: |
