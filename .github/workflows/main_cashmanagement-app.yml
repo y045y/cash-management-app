@@ -16,23 +16,33 @@ jobs:
       contents: read #This is required for actions/checkout
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
       - name: Set up Node.js version
         uses: actions/setup-node@v3
         with:
           node-version: '20.x'
 
-      - name: npm install, build, and test
+      - name: Install Backend Dependencies
         run: |
+          cd backend
           npm install
-          npm run build --if-present
-          npm run test --if-present
 
-      - name: Zip artifact for deployment
-        run: zip release.zip ./* -r
+      - name: Install Frontend Dependencies & Build
+        run: |
+          cd frontend
+          npm install
+          npm run build
+          rm -rf ../backend/build
+          mv build ../backend/
 
-      - name: Upload artifact for deployment job
+      - name: Zip Backend Directory for Deployment
+        run: |
+          cd backend
+          zip -r ../release.zip ./
+
+      - name: Upload Artifact for Deployment Job
         uses: actions/upload-artifact@v4
         with:
           name: node-app
@@ -49,14 +59,14 @@ jobs:
       contents: read #This is required for actions/checkout
 
     steps:
-      - name: Download artifact from build job
+      - name: Download Artifact from Build Job
         uses: actions/download-artifact@v4
         with:
           name: node-app
 
-      - name: Unzip artifact for deployment
+      - name: Unzip Artifact for Deployment
         run: unzip release.zip
-      
+
       - name: Login to Azure
         uses: azure/login@v2
         with:
@@ -64,11 +74,10 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_BCE534E2200D4DB68890EE37C619A7FF }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_1A048D6CAACF466DB634F3F5575E142A }}
 
-      - name: 'Deploy to Azure Web App'
+      - name: Deploy to Azure Web App
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'CashManagement-App'
           slot-name: 'Production'
           package: .
-          
