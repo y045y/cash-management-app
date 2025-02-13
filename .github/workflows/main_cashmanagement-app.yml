@@ -90,8 +90,6 @@ jobs:
       - name: Post-Deployment SSH npm install
         run: |
           curl -u "${{ secrets.AZURE_APP_DEPLOY_USER }}:${{ secrets.AZURE_APP_DEPLOY_PASSWORD }}" \
-               -X POST "https://$APP_NAME.scm.azurewebsites.net/api/command" \
+               -X POST "https://cashmanagement-app-ahhjctexgrbbgce2.scm.japaneast-01.azurewebsites.net/api/command" \
                -H "Content-Type: application/json" \
                -d '{"command": "cd site/wwwroot && npm install"}'
-        env:
-          APP_NAME: 'cashmanagement-app-ahhjctexgrbbgce2'
