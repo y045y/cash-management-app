@@ -94,4 +94,4 @@ jobs:
                -H "Content-Type: application/json" \
                -d '{"command": "cd site/wwwroot && npm install"}'
         env:
-          APP_NAME: 'CashManagement-App'
+          APP_NAME: 'cashmanagement-app-ahhjctexgrbbgce2'
