@@ -2,21 +2,10 @@
   "name": "frontend",
   "version": "0.1.0",
   "private": true,
-  "description": "A React application for cash management",
-  "keywords": [
-    "react",
-    "cash-management",
-    "pdf-generation",
-    "frontend"
-  ],
-  "author": "Your Name",
-  "license": "MIT",
   "dependencies": {
     "@react-pdf/renderer": "^4.1.6",
     "axios": "^1.7.9",
     "bootstrap": "^5.3.3",
-    "cors": "^2.8.5",
-    "cra-template": "1.2.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-modal": "^3.16.3",
@@ -25,45 +14,9 @@
     "react-to-print": "^3.0.4",
     "web-vitals": "^4.2.4"
   },
-  "devDependencies": {
-    "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
-    "concurrently": "^9.1.2",
-    "cross-env": "^7.0.3",
-    "rimraf": "^6.0.1"
-  },
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "postbuild": "npx rimraf ../backend/build && npx cross-env NODE_ENV=production node move-dir.js",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
-  },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
-  },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
-  },
-  "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=6.0.0"
-  },
-  "jest": {
-    "verbose": true,
-    "testEnvironment": "jsdom"
-  },
-  "homepage": "https://cashmanagement-frontend.azurewebsites.net/",
-  "proxy": "https://cashmanagement-backend.azurewebsites.net/api"
+    "postbuild": "move build ../backend/build || mv build ../backend/build"
+  }
 }

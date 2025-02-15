@@ -1,15 +1,12 @@
 {
     "name": "cash-management",
     "version": "1.0.0",
-    "description": "Backend & Frontend together",
     "scripts": {
-        "start": "concurrently \"npm run dev --prefix backend\" \"npm start --prefix frontend\"",
-       "postbuild": "rmdir /s /q ../backend/build && move build ../backend/"
-        
+      "start": "concurrently \"npm run dev --prefix backend\" \"npm start --prefix frontend\"",
+      "build": "npm run build --prefix frontend",
+      "install-all": "npm install && npm install --prefix backend && npm install --prefix frontend"
     },
     "dependencies": {
-        "concurrently": "^7.6.0",
-        "react": "^19.0.0",
-        "react-dom": "^19.0.0"
+      "concurrently": "^7.6.0"
     }
-}
+  }
