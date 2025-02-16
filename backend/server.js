@@ -1,4 +1,7 @@
 require("dotenv").config();
+const multer = require("multer");
+const fs = require('fs');
+const csv = require('csv-parser');
 const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
@@ -15,6 +18,8 @@ const corsOptions = {
     methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
     allowedHeaders: ["Content-Type", "Authorization"],
 };
+// multer 設定：アップロードされたファイルを処理
+const upload = multer({ dest: 'uploads/' }); // ファイルを uploads フォルダに保存
 
 app.use(cors(corsOptions));
 app.use(bodyParser.json());
@@ -182,6 +187,117 @@ router.delete("/transactions/:id", async (req, res) => {
         res.status(500).json({ error: "データ削除に失敗しました" });
     }
 });
+
+router.get("/export-denominations", async (req, res) => {
+    try {
+        const pool = await sql.connect(config);
+        const result = await pool.request()
+            .query(`
+                SELECT
+                    t.Id AS TransactionId,
+                    t.TransactionDate,
+                    t.TransactionType,
+                    t.Amount,
+                    t.Summary,
+                    t.Recipient,
+                    t.Memo,
+                    d.TenThousandYen,
+                    d.FiveThousandYen,
+                    d.OneThousandYen,
+                    d.FiveHundredYen,
+                    d.OneHundredYen,
+                    d.FiftyYen,
+                    d.TenYen,
+                    d.FiveYen,
+                    d.OneYen
+                FROM Transactions t
+                LEFT JOIN Denomination d ON t.Id = d.TransactionId;
+            `);
+
+        let csvData = 'TransactionId, 日付, 取引タイプ, 金額, 摘要, 取引先, メモ, 十万円, 五万円, 一万円, 五百円, 百円, 五十円, 十円, 五円, 一円\n'; // ヘッダー
+
+        // データをCSV形式に変換
+        result.recordset.forEach(row => {
+            const formattedDate = new Date(row.TransactionDate).toLocaleDateString('ja-JP');  // 日本のフォーマットで日付を変換
+            csvData += `${row.TransactionId},${formattedDate},${row.TransactionType},${row.Amount},${row.Summary},${row.Recipient},${row.Memo},${row.TenThousandYen},${row.FiveThousandYen},${row.OneThousandYen},${row.FiveHundredYen},${row.OneHundredYen},${row.FiftyYen},${row.TenYen},${row.FiveYen},${row.OneYen}\n`;
+        });
+
+        // レスポンスヘッダを設定
+        res.header("Content-Type", "text/csv");
+        res.attachment("denominations.csv");
+
+        // CSVデータを送信
+        res.send(csvData);
+
+    } catch (err) {
+        console.error("❌ CSV出力エラー:", err);
+        res.status(500).send("CSV出力に失敗しました");
+    }
+});
+router.post('/import-csv', upload.single('file'), async (req, res) => {
+    const transactions = [];
+    const denominations = [];
+
+    // アップロードされたファイルのパスを取得
+    const filePath = req.file.path;
+
+    fs.createReadStream(filePath)  // アップロードされたファイルを読み込む
+        .pipe(csv())  // CSVをパースする
+        .on('data', (row) => {
+            // CSVのデータを `transactions` と `denominations` に振り分ける
+            const transaction = {
+                TransactionId: row.TransactionId,
+                TransactionDate: row.TransactionDate,
+                TransactionType: row.TransactionType,
+                Amount: row.Amount,
+                Summary: row.Summary,
+                Recipient: row.Recipient,
+                Memo: row.Memo,
+            };
+
+            const denomination = {
+                TransactionId: row.TransactionId,
+                TenThousandYen: row.TenThousandYen,
+                FiveThousandYen: row.FiveThousandYen,
+                OneThousandYen: row.OneThousandYen,
+                FiveHundredYen: row.FiveHundredYen,
+                OneHundredYen: row.OneHundredYen,
+                FiftyYen: row.FiftyYen,
+                TenYen: row.TenYen,
+                FiveYen: row.FiveYen,
+                OneYen: row.OneYen,
+            };
+
+            transactions.push(transaction);
+            denominations.push(denomination);
+        })
+        .on('end', async () => {
+            try {
+                // データベース接続
+                const pool = await sql.connect(config);
+
+                // 取引データを `Transactions` テーブルに挿入
+                await pool.request().bulkInsert('Transactions', transactions);
+
+                // 金種データを `Denominations` テーブルに挿入
+                await pool.request().bulkInsert('Denominations', denominations);
+
+                // 処理が成功した場合
+                res.status(200).send("CSVデータが正常にインポートされました");
+            } catch (error) {
+                console.error("❌ データベース挿入エラー:", error);
+                res.status(500).send("インポートに失敗しました");
+            } finally {
+                // アップロードしたファイルを削除する（不要なら削除しない）
+                fs.unlinkSync(filePath);
+            }
+        })
+        .on('error', (err) => {
+            console.error("❌ CSVファイルの読み込みエラー:", err);
+            res.status(500).send("CSVファイルの読み込みに失敗しました");
+        });
+    });
+
 
 // サーバー起動処理
 const PORT = process.env.PORT || 5000;

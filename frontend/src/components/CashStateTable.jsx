@@ -3,8 +3,8 @@ import axios from "axios";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "../styles/cashStateTable.css"; // ✅ カスタム CSS を適用
 
-// const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
-const API_URL = "https://cashmanagement-app-ahhjctexgrbbgce2.japaneast-01.azurewebsites.net";
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+// const API_URL = "https://cashmanagement-app-ahhjctexgrbbgce2.japaneast-01.azurewebsites.net";
 
 // ✅ 金種の単価
 const denominationValues = {

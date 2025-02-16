@@ -5,8 +5,8 @@ import axios from "axios";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "../styles/cashManagementForm.css";
 
-// const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
-const API_URL = "https://cashmanagement-app-ahhjctexgrbbgce2.japaneast-01.azurewebsites.net";
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+// const API_URL = "https://cashmanagement-app-ahhjctexgrbbgce2.japaneast-01.azurewebsites.net";
 
 const CashManagementFormUI = () => {
     const [difference, setDifference] = useState(0); 
@@ -165,6 +165,22 @@ const CashManagementFormUI = () => {
         //console.log("📌 現在の金庫状態が更新されました:", cashState);
     }, [cashState]);
     
+    const exportToCSV = async () => {
+    try {
+        const response = await axios.get(`${API_URL}/api/export-transactions`, {
+            responseType: 'blob' // バイナリデータ（CSV）として受け取る
+        });
+
+        // ダウンロードリンクを作成してクリック
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(new Blob([response.data])); // CSVデータをBlobとして扱う
+        link.download = 'transactions.csv'; // ファイル名を指定
+        link.click();
+    } catch (error) {
+        console.error("❌ CSVダウンロードエラー:", error);
+    }
+};
+
 
     return (
         <div className="container mt-4 p-3 bg-light rounded shadow-sm">

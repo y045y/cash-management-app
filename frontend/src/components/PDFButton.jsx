@@ -33,7 +33,7 @@ const PDFButton = ({ transactions, currentMonth }) => {
 
   return (
     <button onClick={generatePDF} className="btn btn-primary">
-      PDFをダウンロード
+      履歴PDF
     </button>
   );
 };

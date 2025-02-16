@@ -3,8 +3,8 @@ import axios from "axios";
 import PDFButton from "./PDFButton"; // ✅ PDFダウンロードボタンを追加
 import "bootstrap/dist/css/bootstrap.min.css"; // ✅ Bootstrap を適用
 
-// const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
-const API_URL = "https://cashmanagement-app-ahhjctexgrbbgce2.japaneast-01.azurewebsites.net";
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+//const API_URL = "https://cashmanagement-app-ahhjctexgrbbgce2.japaneast-01.azurewebsites.net";
 
 const TransactionHistory = ({ fetchTransactions, fetchCashState }) => {
     const [transactions, setTransactions] = useState([]);
@@ -75,6 +75,38 @@ const TransactionHistory = ({ fetchTransactions, fetchCashState }) => {
             alert("エラーが発生しました。");
         }
     };
+    const exportToCSV = async () => {
+        try {
+            const response = await axios.get(`${API_URL}/api/export-transactions`, {
+                responseType: 'blob' // バイナリデータ（CSV）として受け取る
+            });
+    
+            // ダウンロードリンクを作成してクリック
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(new Blob([response.data])); // CSVデータをBlobとして扱う
+            link.download = 'transactions.csv'; // ファイル名を指定
+            link.click();
+        } catch (error) {
+            console.error("❌ CSVダウンロードエラー:", error);
+        }
+    };
+    
+    const exportToDenominationsCSV = async () => {
+        try {
+            const response = await axios.get(`${API_URL}/api/export-denominations`, {
+                responseType: 'blob' // バイナリデータ（CSV）として受け取る
+            });
+    
+            // ダウンロードリンクを作成してクリック
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(new Blob([response.data])); // CSVデータをBlobとして扱う
+            link.download = 'denominations.csv'; // ファイル名を指定
+            link.click();
+        } catch (error) {
+            console.error("❌ CSVダウンロードエラー:", error);
+        }
+    };
+    
     
     
     
@@ -82,26 +114,31 @@ const TransactionHistory = ({ fetchTransactions, fetchCashState }) => {
         <div className="container">
             {error && <p className="text-danger text-center">{error}</p>}
 
-            {/* ✅ 月選択ボタン & PDFダウンロード */}
-            <div className="d-flex justify-content-between align-items-center my-3">
-                <div>
-                    <button className="btn btn-outline-primary me-2" onClick={() => setCurrentMonth(prev => 
-                        new Date(new Date(prev + "-01").setMonth(new Date(prev + "-01").getMonth() - 1)).toISOString().slice(0, 7))
-                    }>
-                        ◀ 前月
-                    </button>
-                    <button className="btn btn-outline-secondary me-2" onClick={() => setCurrentMonth(new Date().toISOString().slice(0, 7))}>
-                        📅 当月
-                    </button>
-                    <button className="btn btn-outline-primary" onClick={() => setCurrentMonth(prev => 
-                        new Date(new Date(prev + "-01").setMonth(new Date(prev + "-01").getMonth() + 1)).toISOString().slice(0, 7))
-                    }>
-                        次月 ▶
-                    </button>
-                </div>
-                {/* ✅ PDFダウンロードボタン */}
+            <div className="d-flex justify-content-end my-3">
+                <button className="btn btn-outline-primary me-2" onClick={() => setCurrentMonth(prev => 
+                    new Date(new Date(prev + "-01").setMonth(new Date(prev + "-01").getMonth() - 1)).toISOString().slice(0, 7))
+                }>
+                    ◀ 前月
+                </button>
+                <button className="btn btn-outline-secondary me-2" onClick={() => setCurrentMonth(new Date().toISOString().slice(0, 7))}>
+                    📅 当月
+                </button>
+                <button className="btn btn-outline-primary me-2" onClick={() => setCurrentMonth(prev => 
+                    new Date(new Date(prev + "-01").setMonth(new Date(prev + "-01").getMonth() + 1)).toISOString().slice(0, 7))
+                }>
+                    次月 ▶
+                </button>
+                {/* ✅ CSVエクスポートボタン */}
+                <button className="btn btn-success" onClick={exportToCSV}>
+                    履歴CSVEx
+                </button>
+                {/* ✅ Denominations CSVエクスポートボタン */}
+                <button className="btn btn-info" onClick={exportToDenominationsCSV}>
+                    金種CSVEx
+                </button>
                 <PDFButton transactions={transactions} currentMonth={currentMonth} />
             </div>
+
 
             {/* ✅ 取引履歴テーブル */}
             <div className="table-responsive">
