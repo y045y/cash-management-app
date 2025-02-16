@@ -69,7 +69,7 @@ const styles = StyleSheet.create({
 });
 
 const CashManagementPDF = ({ history = [], previousCarryOver = {}, currentMonth }) => {
-  console.log("📌 取引履歴データ:", JSON.stringify(history, null, 2));
+  // console.log("📌 取引履歴データ:", JSON.stringify(history, null, 2));
   const formatNumber = (number) => (number != null ? new Intl.NumberFormat('ja-JP').format(number) : '0');
   const formatDate = (dateString) => {
     if (!dateString) return "";

@@ -16,7 +16,7 @@ const TransactionHistory = ({ fetchTransactions, fetchCashState }) => {
     const fetchTransactionsData = useCallback(async (retryCount = 3) => {
         try {
             const response = await axios.get(`${API_URL}/api/transaction-history?startDate=${currentMonth}-01`, { timeout: 10000 });
-            console.log("📌 取得したデータ:", response.data);
+            // console.log("📌 取得したデータ:", response.data);
     
             if (response.data && response.data.transactions) {
                 setTransactions(response.data.transactions);
@@ -48,7 +48,7 @@ const TransactionHistory = ({ fetchTransactions, fetchCashState }) => {
             return;
         }
     
-        console.log("🗑 削除リクエスト送信:", transactionId);
+        // console.log("🗑 削除リクエスト送信:", transactionId);
     
         if (!window.confirm("この取引を削除しますか？")) return;
     
@@ -58,11 +58,11 @@ const TransactionHistory = ({ fetchTransactions, fetchCashState }) => {
             if (response.status === 200) {
                 alert("取引が削除されました！");
     
-                console.log("📌 fetchTransactions を実行");
+                // console.log("📌 fetchTransactions を実行");
                 await fetchTransactions(); // ✅ 取引履歴の更新
                 
                 if (typeof fetchCashState === "function") {
-                    console.log("📌 fetchCashState を実行");
+                    // console.log("📌 fetchCashState を実行");
                     await fetchCashState(); // ✅ 金庫状態の更新
                 } else {
                     console.warn("⚠ fetchCashState が未定義のため、金庫状態を更新できません。");
@@ -149,8 +149,8 @@ const TransactionHistory = ({ fetchTransactions, fetchCashState }) => {
     <button 
         className="btn btn-sm btn-danger" 
         onClick={() => {
-            console.log("🛠 削除しようとしている取引データ:", tx); // 🔍 `tx` のデータを確認
-            console.log("🛠 削除対象の TransactionID:", tx.TransactionID); // 🔍 `TransactionID` が正しいか確認
+            // console.log("🛠 削除しようとしている取引データ:", tx); // 🔍 `tx` のデータを確認
+            // console.log("🛠 削除対象の TransactionID:", tx.TransactionID); // 🔍 `TransactionID` が正しいか確認
             handleDelete(tx.TransactionID);
         }}
     >

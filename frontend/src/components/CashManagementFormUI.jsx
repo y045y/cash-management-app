@@ -34,11 +34,11 @@ const CashManagementFormUI = () => {
     
             const response = await axios.get(`${API_URL}/api/transaction-history?startDate=${startDate.toISOString().slice(0, 10)}&endDate=${endDate}`);
     
-            console.log("📌 取得した取引履歴:", response.data.transactions);
+           // console.log("📌 取得した取引履歴:", response.data.transactions);
     
             setTransactions(response.data.transactions || []);
         } catch (error) {
-            console.error("❌ 取引履歴取得エラー:", error);
+            //console.error("❌ 取引履歴取得エラー:", error);
         }
     };
     
@@ -48,13 +48,13 @@ const CashManagementFormUI = () => {
             const response = await axios.get(`${API_URL}/api/current-inventory`, { timeout: 10000 });
     
             if (response.status === 200 && response.data) {
-                console.log("📌 取得した金庫状態:", response.data);
+               // console.log("📌 取得した金庫状態:", response.data);
                 setCashState(response.data);
             } else {
-                console.error("⚠️ 金庫状態の取得に失敗しました。レスポンス:", response);
+              //  console.error("⚠️ 金庫状態の取得に失敗しました。レスポンス:", response);
             }
         } catch (error) {
-            console.error("❌ 金庫状態取得エラー:", error);
+            //console.error("❌ 金庫状態取得エラー:", error);
         }
     };
     
@@ -65,12 +65,12 @@ const CashManagementFormUI = () => {
         // 🔹 取引履歴が更新されたらログを出力
    
     useEffect(() => {
-        console.log("📌 取引履歴が更新されました:", transactions);
+        //console.log("📌 取引履歴が更新されました:", transactions);
     }, [transactions]);
     
         // 🔹 金庫状態が更新されたらログを出力
     useEffect(() => {
-            console.log("📌 現在の金庫状態が更新されました:", cashState);
+           // console.log("📌 現在の金庫状態が更新されました:", cashState);
     }, [cashState]);
 
     const handleSubmit = async () => {
@@ -84,7 +84,7 @@ const CashManagementFormUI = () => {
             return;
         }
     
-        console.log("📌 送信前のデータ:", { ...form, Amount: transactionAmount });
+        //console.log("📌 送信前のデータ:", { ...form, Amount: transactionAmount });
     
         const data = {
             TransactionDate: form.date,
@@ -104,18 +104,18 @@ const CashManagementFormUI = () => {
             OneYen: inputCounts.OneYen || 0,
         };
         
-        console.log("📌 API に送信するデータ:", data);
+        //console.log("📌 API に送信するデータ:", data);
     
         try {
             setLoading(true);
             const response = await axios.post(`${API_URL}/api/insert-transaction`, data);
     
-            console.log("📌 API レスポンス:", response.data);
+          //  console.log("📌 API レスポンス:", response.data);
     
             if (response.status === 200 && response.data.data.length > 0) {
                 alert("データが正常に保存されました！");
     
-                console.log("📌 追加する取引データ:", response.data.data[0]);
+            //    console.log("📌 追加する取引データ:", response.data.data[0]);
     
                 // ✅ 最新の取引履歴と金庫状態を取得 (同期的に実行)
                 await fetchTransactions();  // ここでしっかりデータ取得を待つ
@@ -124,13 +124,13 @@ const CashManagementFormUI = () => {
                 // ✅ 手動で最新データをセット (フロントエンドのUI反映)
                 setTransactions(prev => {
                     const updatedTransactions = [...prev, response.data.data[0]];
-                    console.log("📌 更新後の取引履歴:", updatedTransactions);
+              //      console.log("📌 更新後の取引履歴:", updatedTransactions);
                     return updatedTransactions;
                 });
     
                 setCashState(prev => {
                     const updatedCashState = { ...prev, ...response.data.data[0] };
-                    console.log("📌 更新後の金庫状態:", updatedCashState);
+                //    console.log("📌 更新後の金庫状態:", updatedCashState);
                     return updatedCashState;
                 });
     
@@ -148,7 +148,7 @@ const CashManagementFormUI = () => {
                 alert("エラーが発生しました");
             }
         } catch (error) {
-            console.error("❌ エラー:", error);
+            //console.error("❌ エラー:", error);
         } finally {
             setLoading(false);
         }
@@ -157,12 +157,12 @@ const CashManagementFormUI = () => {
     
     // ✅ 取引履歴の変化を監視
     useEffect(() => {
-        console.log("📌 取引履歴が更新されました:", transactions);
+       // console.log("📌 取引履歴が更新されました:", transactions);
     }, [transactions]);
     
     // ✅ 現在の金庫状態の変化を監視
     useEffect(() => {
-        console.log("📌 現在の金庫状態が更新されました:", cashState);
+        //console.log("📌 現在の金庫状態が更新されました:", cashState);
     }, [cashState]);
     
 
@@ -193,7 +193,7 @@ const CashManagementFormUI = () => {
                             value={form.transactionType}
                             onChange={(e) => {
                                 const newTransactionType = e.target.value;
-                                console.log("📌 取引タイプ変更:", newTransactionType); // 🔹 ここでログを出力
+                                //console.log("📌 取引タイプ変更:", newTransactionType); // 🔹 ここでログを出力
                                 setForm({ ...form, transactionType: newTransactionType });
                             }}
                             className="form-select"

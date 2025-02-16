@@ -57,7 +57,7 @@ const CashStateTable = ({ inputCounts, setInputCounts, setDifference }) => {
             const response = await axios.get(`${API_URL}/api/current-inventory`, { timeout: 10000 });
             if (response.data) {
                 setCashState(mapCashStateKeys(response.data));  // 🔹 変換後のデータをセット
-                console.log("📌 更新後の金庫状態 (setCashState):", mapCashStateKeys(response.data));
+                // console.log("📌 更新後の金庫状態 (setCashState):", mapCashStateKeys(response.data));
             } else {
                 setCashState({});
                 setError("データが取得できませんでした。");
@@ -88,7 +88,7 @@ const CashStateTable = ({ inputCounts, setInputCounts, setDifference }) => {
             0
         );
     
-        console.log("📌 計算した差額 (difference):", total);
+        // console.log("📌 計算した差額 (difference):", total);
         return total;
     }, [inputCounts]);  // 🔹 `inputCounts` に依存
     
