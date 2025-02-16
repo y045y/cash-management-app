@@ -5,7 +5,8 @@ import axios from "axios";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "../styles/cashManagementForm.css";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+// const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+const API_URL = "https://cashmanagement-app-ahhjctexgrbbgce2.japaneast-01.azurewebsites.net";
 
 const CashManagementFormUI = () => {
     const [difference, setDifference] = useState(0); 

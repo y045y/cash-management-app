@@ -1,0 +1,8 @@
+{
+    "appService.defaultWebAppToDeploy": "/subscriptions/47f1ff5a-1df1-4c3d-8549-3ce74ea1de6e/resourceGroups/CashManagement-RG/providers/Microsoft.Web/sites/cashmanagement-app",
+    "appService.deploySubpath": "backend",
+    "appService.zipIgnorePattern": [
+        "node_modules{,/**}",
+        ".vscode{,/**}"
+    ]
+}
