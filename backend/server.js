@@ -214,90 +214,131 @@ router.get("/export-denominations", async (req, res) => {
                 LEFT JOIN Denomination d ON t.Id = d.TransactionId;
             `);
 
-        let csvData = 'TransactionId, 日付, 取引タイプ, 金額, 摘要, 取引先, メモ, 十万円, 五万円, 一万円, 五百円, 百円, 五十円, 十円, 五円, 一円\n'; // ヘッダー
+        // ヘッダーをデータベースカラム名に合わせる
+        const bom = '\uFEFF';
+        let csvData = 'TransactionId,TransactionDate,TransactionType,Amount,Summary,Recipient,Memo,TenThousandYen,FiveThousandYen,OneThousandYen,FiveHundredYen,OneHundredYen,FiftyYen,TenYen,FiveYen,OneYen\n';
 
         // データをCSV形式に変換
         result.recordset.forEach(row => {
-            const formattedDate = new Date(row.TransactionDate).toLocaleDateString('ja-JP');  // 日本のフォーマットで日付を変換
+            const dateObj = new Date(row.TransactionDate);
+            const formattedDate = `${dateObj.getFullYear()}/${(dateObj.getMonth() + 1).toString().padStart(2, '0')}/${dateObj.getDate().toString().padStart(2, '0')}`;
+
             csvData += `${row.TransactionId},${formattedDate},${row.TransactionType},${row.Amount},${row.Summary},${row.Recipient},${row.Memo},${row.TenThousandYen},${row.FiveThousandYen},${row.OneThousandYen},${row.FiveHundredYen},${row.OneHundredYen},${row.FiftyYen},${row.TenYen},${row.FiveYen},${row.OneYen}\n`;
         });
 
         // レスポンスヘッダを設定
-        res.header("Content-Type", "text/csv");
+        res.header("Content-Type", "text/csv; charset=utf-8");
         res.attachment("denominations.csv");
-
-        // CSVデータを送信
-        res.send(csvData);
+        res.send(bom + csvData);
 
     } catch (err) {
         console.error("❌ CSV出力エラー:", err);
         res.status(500).send("CSV出力に失敗しました");
     }
 });
+
+
+
 router.post('/import-csv', upload.single('file'), async (req, res) => {
     const transactions = [];
     const denominations = [];
 
-    // アップロードされたファイルのパスを取得
     const filePath = req.file.path;
 
-    fs.createReadStream(filePath)  // アップロードされたファイルを読み込む
-        .pipe(csv())  // CSVをパースする
+    const parseDate = (dateStr) => {
+        if (!dateStr) return null; // 空の場合はnullを返す
+        const [year, month, day] = dateStr.split('/').map(Number);
+        return new Date(year, month - 1, day);
+    };
+
+    fs.createReadStream(filePath)
+        .pipe(csv())
         .on('data', (row) => {
-            // CSVのデータを `transactions` と `denominations` に振り分ける
             const transaction = {
-                TransactionId: row.TransactionId,
-                TransactionDate: row.TransactionDate,
+                TransactionId: parseInt(row.TransactionId),
+                TransactionDate: parseDate(row.TransactionDate),
                 TransactionType: row.TransactionType,
-                Amount: row.Amount,
+                Amount: parseInt(row.Amount),
                 Summary: row.Summary,
                 Recipient: row.Recipient,
                 Memo: row.Memo,
             };
 
             const denomination = {
-                TransactionId: row.TransactionId,
-                TenThousandYen: row.TenThousandYen,
-                FiveThousandYen: row.FiveThousandYen,
-                OneThousandYen: row.OneThousandYen,
-                FiveHundredYen: row.FiveHundredYen,
-                OneHundredYen: row.OneHundredYen,
-                FiftyYen: row.FiftyYen,
-                TenYen: row.TenYen,
-                FiveYen: row.FiveYen,
-                OneYen: row.OneYen,
+                TransactionId: parseInt(row.TransactionId),
+                TenThousandYen: parseInt(row.TenThousandYen) || 0,
+                FiveThousandYen: parseInt(row.FiveThousandYen) || 0,
+                OneThousandYen: parseInt(row.OneThousandYen) || 0,
+                FiveHundredYen: parseInt(row.FiveHundredYen) || 0,
+                OneHundredYen: parseInt(row.OneHundredYen) || 0,
+                FiftyYen: parseInt(row.FiftyYen) || 0,
+                TenYen: parseInt(row.TenYen) || 0,
+                FiveYen: parseInt(row.FiveYen) || 0,
+                OneYen: parseInt(row.OneYen) || 0,
             };
 
             transactions.push(transaction);
             denominations.push(denomination);
         })
         .on('end', async () => {
+            const pool = await sql.connect(config);
+            const transaction = pool.transaction();
+
             try {
-                // データベース接続
-                const pool = await sql.connect(config);
+                await transaction.begin();
 
-                // 取引データを `Transactions` テーブルに挿入
-                await pool.request().bulkInsert('Transactions', transactions);
+                for (const t of transactions) {
+                    const transactionResult = await transaction.request()
+                        .input('TransactionDate', sql.Date, t.TransactionDate || null)
+                        .input('TransactionType', sql.NVarChar, t.TransactionType)
+                        .input('Amount', sql.Int, t.Amount)
+                        .input('Summary', sql.NVarChar, t.Summary)
+                        .input('Recipient', sql.NVarChar, t.Recipient)
+                        .input('Memo', sql.NVarChar, t.Memo)
+                        .query(`
+                            INSERT INTO Transactions (TransactionDate, TransactionType, Amount, Summary, Recipient, Memo)
+                            OUTPUT INSERTED.Id
+                            VALUES (@TransactionDate, @TransactionType, @Amount, @Summary, @Recipient, @Memo)
+                        `);
 
-                // 金種データを `Denominations` テーブルに挿入
-                await pool.request().bulkInsert('Denominations', denominations);
+                    const insertedId = transactionResult.recordset[0].Id;
 
-                // 処理が成功した場合
-                res.status(200).send("CSVデータが正常にインポートされました");
-            } catch (error) {
-                console.error("❌ データベース挿入エラー:", error);
-                res.status(500).send("インポートに失敗しました");
+                    const d = denominations.find(d => d.TransactionId === t.TransactionId);
+                    if (d) {
+                        await transaction.request()
+                            .input('TransactionId', sql.Int, insertedId)
+                            .input('TenThousandYen', sql.Int, d.TenThousandYen)
+                            .input('FiveThousandYen', sql.Int, d.FiveThousandYen)
+                            .input('OneThousandYen', sql.Int, d.OneThousandYen)
+                            .input('FiveHundredYen', sql.Int, d.FiveHundredYen)
+                            .input('OneHundredYen', sql.Int, d.OneHundredYen)
+                            .input('FiftyYen', sql.Int, d.FiftyYen)
+                            .input('TenYen', sql.Int, d.TenYen)
+                            .input('FiveYen', sql.Int, d.FiveYen)
+                            .input('OneYen', sql.Int, d.OneYen)
+                            .query(`
+                                INSERT INTO Denomination (TransactionId, TenThousandYen, FiveThousandYen, OneThousandYen, FiveHundredYen, OneHundredYen, FiftyYen, TenYen, FiveYen, OneYen)
+                                VALUES (@TransactionId, @TenThousandYen, @FiveThousandYen, @OneThousandYen, @FiveHundredYen, @OneHundredYen, @FiftyYen, @TenYen, @FiveYen, @OneYen)
+                            `);
+                    }
+                }
+
+                await transaction.commit();
+
+                res.status(200).send('CSVデータが正常にインポートされました');
+            } catch (err) {
+                await transaction.rollback();
+                console.error('❌ データベース挿入エラー:', err);
+                res.status(500).send('インポートに失敗しました');
             } finally {
-                // アップロードしたファイルを削除する（不要なら削除しない）
                 fs.unlinkSync(filePath);
             }
         })
         .on('error', (err) => {
-            console.error("❌ CSVファイルの読み込みエラー:", err);
-            res.status(500).send("CSVファイルの読み込みに失敗しました");
+            console.error('❌ CSVファイルの読み込みエラー:', err);
+            res.status(500).send('CSVファイルの読み込みに失敗しました');
         });
-    });
-
+});
 
 // サーバー起動処理
 const PORT = process.env.PORT || 5000;
