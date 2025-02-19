@@ -20,7 +20,7 @@ const CashManagementFormUI = () => {
         amount: 0,
         transactionType: "出金",
         summary: "交通費",
-        recipient: "なし",
+        recipient: "会社",
         memo: "",
     });
 
@@ -233,15 +233,28 @@ const CashManagementFormUI = () => {
 
                     {/* 取引先 */}
                     <div className="col-md-2">
-                        <label className="form-label fw-bold">取引先</label>
+                        <label className="form-label fw-bold">相手</label>
                         <select
                             value={form.recipient}
                             onChange={(e) => setForm({ ...form, recipient: e.target.value })}
                             className="form-select"
                         >
-                            <option value="なし">なし</option>
-                            <option value="取引先A">取引先A</option>
-                            <option value="取引先B">取引先B</option>
+                            <option value="会社">会社</option>
+                            <option value="佐脇">佐脇</option>
+                            <option value="近松">近松</option>
+                            <option value="白井">白井</option>
+                            <option value="倉内">倉内</option>
+                            <option value="杉山">杉山</option>
+                            <option value="島村">島村</option>
+                            <option value="日野">日野</option>
+                            <option value="佐藤">佐藤</option>
+                            <option value="宮崎">宮崎</option>
+                            <option value="古川">古川</option>
+                            <option value="大木">大木</option>
+                            <option value="酒井">酒井</option>
+                            <option value="林">林</option>
+                            <option value="小林">小林</option>
+                    
                         </select>
                     </div>
 
@@ -254,8 +267,12 @@ const CashManagementFormUI = () => {
                             className="form-select"
                         >
                             <option value="交通費">交通費</option>
-                            <option value="食費">食費</option>
-                            <option value="雑費">雑費</option>
+                            <option value="その他">その他</option>
+                            <option value="仮払">仮払</option>
+                            <option value="仮払清算">仮払清算</option>
+                            <option value="小口入金">小口入金</option>
+                            <option value="両替">両替</option>
+                            <option value="調整">調整</option>
                         </select>
                     </div>
 

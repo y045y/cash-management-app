@@ -75,21 +75,36 @@ const TransactionHistory = ({ fetchTransactions, fetchCashState }) => {
             alert("エラーが発生しました。");
         }
     };
-    const exportToCSV = async () => {
+    const handleImportClick = () => {
+        document.getElementById('csvImportInput').click();
+    };
+    
+    const importCSV = async (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+    
+        const formData = new FormData();
+        formData.append('file', file);
+    
         try {
-            const response = await axios.get(`${API_URL}/api/export-transactions`, {
-                responseType: 'blob' // バイナリデータ（CSV）として受け取る
+            const response = await axios.post(`${API_URL}/api/import-csv`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
             });
     
-            // ダウンロードリンクを作成してクリック
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(new Blob([response.data])); // CSVデータをBlobとして扱う
-            link.download = 'transactions.csv'; // ファイル名を指定
-            link.click();
+            alert(response.data);
+            await fetchTransactions();
+            await fetchCashState();
         } catch (error) {
-            console.error("❌ CSVダウンロードエラー:", error);
+            console.error('❌ CSVインポートエラー:', error);
+            alert('CSVインポートに失敗しました');
+        } finally {
+            // 同じファイルを連続で選べるようにリセット
+            event.target.value = "";
         }
     };
+    
+    
+
     
     const exportToDenominationsCSV = async () => {
         try {
@@ -99,8 +114,8 @@ const TransactionHistory = ({ fetchTransactions, fetchCashState }) => {
     
             // ダウンロードリンクを作成してクリック
             const link = document.createElement('a');
-            link.href = URL.createObjectURL(new Blob([response.data])); // CSVデータをBlobとして扱う
-            link.download = 'denominations.csv'; // ファイル名を指定
+            link.href = URL.createObjectURL(new Blob([response.data]));
+            link.download = 'denominations.csv';
             link.click();
         } catch (error) {
             console.error("❌ CSVダウンロードエラー:", error);
@@ -113,9 +128,26 @@ const TransactionHistory = ({ fetchTransactions, fetchCashState }) => {
     return (
         <div className="container">
             {error && <p className="text-danger text-center">{error}</p>}
+            {/* 🔽 表示中の月を出す */}
+        {/* 🔽 表示中の月 */}
+        <h4 className="text-center my-3">
+            {new Date(`${currentMonth}-01`).getFullYear()}年{new Date(`${currentMonth}-01`).getMonth() + 1}月度
+        </h4>
 
-            <div className="d-flex justify-content-end my-3">
-                <button className="btn btn-outline-primary me-2" onClick={() => setCurrentMonth(prev => 
+        <div className="d-flex justify-content-between align-items-center my-3">
+            {/* 🔽 左側（CSV Im/Ex） */}
+            <div>
+                <button className="btn btn-warning me-2" onClick={handleImportClick}>
+                    CSVIm
+                </button>
+                <button className="btn btn-info me-2" onClick={exportToDenominationsCSV}>
+                    CSVEx
+                </button>
+            </div>
+
+            {/* 🔽 中央（前月・当月・次月） */}
+            <div>
+                <button className="btn btn-outline-primary me-2" onClick={() => setCurrentMonth(prev =>
                     new Date(new Date(prev + "-01").setMonth(new Date(prev + "-01").getMonth() - 1)).toISOString().slice(0, 7))
                 }>
                     ◀ 前月
@@ -123,21 +155,27 @@ const TransactionHistory = ({ fetchTransactions, fetchCashState }) => {
                 <button className="btn btn-outline-secondary me-2" onClick={() => setCurrentMonth(new Date().toISOString().slice(0, 7))}>
                     📅 当月
                 </button>
-                <button className="btn btn-outline-primary me-2" onClick={() => setCurrentMonth(prev => 
+                <button className="btn btn-outline-primary me-2" onClick={() => setCurrentMonth(prev =>
                     new Date(new Date(prev + "-01").setMonth(new Date(prev + "-01").getMonth() + 1)).toISOString().slice(0, 7))
                 }>
                     次月 ▶
                 </button>
-                {/* ✅ CSVエクスポートボタン */}
-                <button className="btn btn-success" onClick={exportToCSV}>
-                    履歴CSVEx
-                </button>
-                {/* ✅ Denominations CSVエクスポートボタン */}
-                <button className="btn btn-info" onClick={exportToDenominationsCSV}>
-                    金種CSVEx
-                </button>
+            </div>
+
+            {/* 🔽 右側（PDFボタン） */}
+            <div>
                 <PDFButton transactions={transactions} currentMonth={currentMonth} />
             </div>
+
+            {/* CSVインポート隠しinput */}
+            <input
+                id="csvImportInput"
+                type="file"
+                accept=".csv"
+                onChange={importCSV}
+                style={{ display: 'none' }}
+            />
+        </div>
 
 
             {/* ✅ 取引履歴テーブル */}

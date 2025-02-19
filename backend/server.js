@@ -214,19 +214,25 @@ router.get("/export-denominations", async (req, res) => {
                 LEFT JOIN Denomination d ON t.Id = d.TransactionId;
             `);
 
-        // ヘッダーをデータベースカラム名に合わせる
         const bom = '\uFEFF';
         let csvData = 'TransactionId,TransactionDate,TransactionType,Amount,Summary,Recipient,Memo,TenThousandYen,FiveThousandYen,OneThousandYen,FiveHundredYen,OneHundredYen,FiftyYen,TenYen,FiveYen,OneYen\n';
 
-        // データをCSV形式に変換
-        result.recordset.forEach(row => {
-            const dateObj = new Date(row.TransactionDate);
-            const formattedDate = `${dateObj.getFullYear()}/${(dateObj.getMonth() + 1).toString().padStart(2, '0')}/${dateObj.getDate().toString().padStart(2, '0')}`;
+        const escapeCsv = (value) => {
+            if (value == null) return '';
+            const strValue = String(value);
+            return strValue.includes(',') || strValue.includes('\n') || strValue.includes('"')
+                ? `"${strValue.replace(/"/g, '""')}"`
+                : strValue;
+        };
 
-            csvData += `${row.TransactionId},${formattedDate},${row.TransactionType},${row.Amount},${row.Summary},${row.Recipient},${row.Memo},${row.TenThousandYen},${row.FiveThousandYen},${row.OneThousandYen},${row.FiveHundredYen},${row.OneHundredYen},${row.FiftyYen},${row.TenYen},${row.FiveYen},${row.OneYen}\n`;
+        result.recordset.forEach(row => {
+            const formattedDate = row.TransactionDate
+                ? new Date(row.TransactionDate).toISOString().split('T')[0].replace(/-/g, '/')
+                : '';
+
+            csvData += `${row.TransactionId || ''},${formattedDate},${escapeCsv(row.TransactionType)},${row.Amount || ''},${escapeCsv(row.Summary)},${escapeCsv(row.Recipient)},${escapeCsv(row.Memo)},${row.TenThousandYen || 0},${row.FiveThousandYen || 0},${row.OneThousandYen || 0},${row.FiveHundredYen || 0},${row.OneHundredYen || 0},${row.FiftyYen || 0},${row.TenYen || 0},${row.FiveYen || 0},${row.OneYen || 0}\n`;
         });
 
-        // レスポンスヘッダを設定
         res.header("Content-Type", "text/csv; charset=utf-8");
         res.attachment("denominations.csv");
         res.send(bom + csvData);
@@ -246,7 +252,7 @@ router.post('/import-csv', upload.single('file'), async (req, res) => {
     const filePath = req.file.path;
 
     const parseDate = (dateStr) => {
-        if (!dateStr) return null; // 空の場合はnullを返す
+        if (!dateStr) return null;
         const [year, month, day] = dateStr.split('/').map(Number);
         return new Date(year, month - 1, day);
     };
@@ -254,18 +260,19 @@ router.post('/import-csv', upload.single('file'), async (req, res) => {
     fs.createReadStream(filePath)
         .pipe(csv())
         .on('data', (row) => {
+            const transactionId = parseInt(row.TransactionId);
+            if (transactionId < 0) return; // 繰越・現在残高など無視
+
             const transaction = {
-                TransactionId: parseInt(row.TransactionId),
                 TransactionDate: parseDate(row.TransactionDate),
                 TransactionType: row.TransactionType,
-                Amount: parseInt(row.Amount),
+                Amount: row.Amount ? parseInt(row.Amount) : 0,
                 Summary: row.Summary,
                 Recipient: row.Recipient,
                 Memo: row.Memo,
             };
 
             const denomination = {
-                TransactionId: parseInt(row.TransactionId),
                 TenThousandYen: parseInt(row.TenThousandYen) || 0,
                 FiveThousandYen: parseInt(row.FiveThousandYen) || 0,
                 OneThousandYen: parseInt(row.OneThousandYen) || 0,
@@ -283,13 +290,52 @@ router.post('/import-csv', upload.single('file'), async (req, res) => {
         .on('end', async () => {
             const pool = await sql.connect(config);
             const transaction = pool.transaction();
+            await transaction.begin();
 
             try {
-                await transaction.begin();
+                // 🔥 テーブル削除（CASCADEも考慮して順序大事）
+                await transaction.request().query('DROP TABLE IF EXISTS Denomination');
+                await transaction.request().query('DROP TABLE IF EXISTS Transactions');
 
-                for (const t of transactions) {
-                    const transactionResult = await transaction.request()
-                        .input('TransactionDate', sql.Date, t.TransactionDate || null)
+                // 🔥 Transactionsテーブル再作成
+                await transaction.request().query(`
+                    CREATE TABLE Transactions(
+                        Id INT IDENTITY(1,1) PRIMARY KEY,
+                        TransactionDate DATETIME2(3),
+                        TransactionType NVARCHAR(50),
+                        Amount INT,
+                        Summary NVARCHAR(255),
+                        Memo NVARCHAR(255),
+                        Recipient NVARCHAR(255),
+                        RunningBalance INT DEFAULT(0) NOT NULL
+                    )
+                `);
+
+                // 🔥 Denominationテーブル再作成
+                await transaction.request().query(`
+                    CREATE TABLE Denomination(
+                        TransactionId INT PRIMARY KEY,
+                        TenThousandYen INT DEFAULT(0),
+                        FiveThousandYen INT DEFAULT(0),
+                        OneThousandYen INT DEFAULT(0),
+                        FiveHundredYen INT DEFAULT(0),
+                        OneHundredYen INT DEFAULT(0),
+                        FiftyYen INT DEFAULT(0),
+                        TenYen INT DEFAULT(0),
+                        FiveYen INT DEFAULT(0),
+                        OneYen INT DEFAULT(0),
+                        FOREIGN KEY (TransactionId) REFERENCES Transactions(Id) ON DELETE CASCADE
+                    )
+                `);
+
+                // 🔥 データ挿入
+                for (let i = 0; i < transactions.length; i++) {
+                    const t = transactions[i];
+                    const d = denominations[i];
+
+                    const request = transaction.request();
+                    const transactionResult = await request
+                        .input('TransactionDate', sql.DateTime2(3), t.TransactionDate || null)
                         .input('TransactionType', sql.NVarChar, t.TransactionType)
                         .input('Amount', sql.Int, t.Amount)
                         .input('Summary', sql.NVarChar, t.Summary)
@@ -303,29 +349,26 @@ router.post('/import-csv', upload.single('file'), async (req, res) => {
 
                     const insertedId = transactionResult.recordset[0].Id;
 
-                    const d = denominations.find(d => d.TransactionId === t.TransactionId);
-                    if (d) {
-                        await transaction.request()
-                            .input('TransactionId', sql.Int, insertedId)
-                            .input('TenThousandYen', sql.Int, d.TenThousandYen)
-                            .input('FiveThousandYen', sql.Int, d.FiveThousandYen)
-                            .input('OneThousandYen', sql.Int, d.OneThousandYen)
-                            .input('FiveHundredYen', sql.Int, d.FiveHundredYen)
-                            .input('OneHundredYen', sql.Int, d.OneHundredYen)
-                            .input('FiftyYen', sql.Int, d.FiftyYen)
-                            .input('TenYen', sql.Int, d.TenYen)
-                            .input('FiveYen', sql.Int, d.FiveYen)
-                            .input('OneYen', sql.Int, d.OneYen)
-                            .query(`
-                                INSERT INTO Denomination (TransactionId, TenThousandYen, FiveThousandYen, OneThousandYen, FiveHundredYen, OneHundredYen, FiftyYen, TenYen, FiveYen, OneYen)
-                                VALUES (@TransactionId, @TenThousandYen, @FiveThousandYen, @OneThousandYen, @FiveHundredYen, @OneHundredYen, @FiftyYen, @TenYen, @FiveYen, @OneYen)
-                            `);
-                    }
+                    // 金種データ挿入（TransactionIdではなくinsertedIdを使う！）
+                    await transaction.request()
+                        .input('TransactionId', sql.Int, insertedId)
+                        .input('TenThousandYen', sql.Int, d.TenThousandYen)
+                        .input('FiveThousandYen', sql.Int, d.FiveThousandYen)
+                        .input('OneThousandYen', sql.Int, d.OneThousandYen)
+                        .input('FiveHundredYen', sql.Int, d.FiveHundredYen)
+                        .input('OneHundredYen', sql.Int, d.OneHundredYen)
+                        .input('FiftyYen', sql.Int, d.FiftyYen)
+                        .input('TenYen', sql.Int, d.TenYen)
+                        .input('FiveYen', sql.Int, d.FiveYen)
+                        .input('OneYen', sql.Int, d.OneYen)
+                        .query(`
+                            INSERT INTO Denomination (TransactionId, TenThousandYen, FiveThousandYen, OneThousandYen, FiveHundredYen, OneHundredYen, FiftyYen, TenYen, FiveYen, OneYen)
+                            VALUES (@TransactionId, @TenThousandYen, @FiveThousandYen, @OneThousandYen, @FiveHundredYen, @OneHundredYen, @FiftyYen, @TenYen, @FiveYen, @OneYen)
+                        `);
                 }
 
                 await transaction.commit();
-
-                res.status(200).send('CSVデータが正常にインポートされました');
+                res.status(200).send('CSVデータが正常にインポートされました（テーブル再作成）');
             } catch (err) {
                 await transaction.rollback();
                 console.error('❌ データベース挿入エラー:', err);
@@ -339,6 +382,8 @@ router.post('/import-csv', upload.single('file'), async (req, res) => {
             res.status(500).send('CSVファイルの読み込みに失敗しました');
         });
 });
+
+
 
 // サーバー起動処理
 const PORT = process.env.PORT || 5000;
