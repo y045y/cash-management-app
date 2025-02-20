@@ -1,23 +1,19 @@
 import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
-import PDFButton from "./PDFButton"; // ✅ PDFダウンロードボタンを追加
-import "bootstrap/dist/css/bootstrap.min.css"; // ✅ Bootstrap を適用
+import PDFButton from "./PDFButton";
+import "bootstrap/dist/css/bootstrap.min.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
-//const API_URL = "https://cashmanagement-app-ahhjctexgrbbgce2.japaneast-01.azurewebsites.net";
 
 const TransactionHistory = ({ fetchTransactions, fetchCashState }) => {
     const [transactions, setTransactions] = useState([]);
+    const [editRow, setEditRow] = useState(null);
     const [currentMonth, setCurrentMonth] = useState(new Date().toISOString().slice(0, 7));
     const [error, setError] = useState(null);
 
-
-    // ✅ `useCallback` を使用して関数をメモ化
     const fetchTransactionsData = useCallback(async (retryCount = 3) => {
         try {
             const response = await axios.get(`${API_URL}/api/transaction-history?startDate=${currentMonth}-01`, { timeout: 10000 });
-            // console.log("📌 取得したデータ:", response.data);
-    
             if (response.data && response.data.transactions) {
                 setTransactions(response.data.transactions);
             } else {
@@ -25,160 +21,118 @@ const TransactionHistory = ({ fetchTransactions, fetchCashState }) => {
                 setError("データが取得できませんでした。");
             }
         } catch (error) {
-            console.error("❌ 取引履歴取得エラー:", error);
+            console.error("取引履歴取得エラー:", error);
             if (retryCount > 0) {
-                console.warn(`リトライ中... 残り ${retryCount} 回`);
                 setTimeout(() => fetchTransactionsData(retryCount - 1), 2000);
             } else {
                 setError("取引履歴の取得に失敗しました。サーバーを確認してください。");
             }
         }
-    }, [currentMonth, setTransactions, setError]);  // 🔥 `currentMonth`, `setTransactions`, `setError` を依存配列に追加
-    
-    // ✅ `fetchTransactionsData` を `useEffect` の依存配列に含める
+    }, [currentMonth]);
+
     useEffect(() => {
         fetchTransactionsData();
-    }, [fetchTransactionsData]);  // 🔥 `fetchTransactionsData` を依存配列に含める
-    
+    }, [fetchTransactionsData]);
 
     const handleDelete = async (transactionId) => {
-        if (!transactionId) {
-            console.error("❌ 削除エラー: TransactionID が `undefined` です。");
-            alert("エラー: 削除する取引IDが取得できませんでした。");
-            return;
-        }
-    
-        // console.log("🗑 削除リクエスト送信:", transactionId);
-    
+        if (!transactionId) return;
         if (!window.confirm("この取引を削除しますか？")) return;
-    
+
         try {
-            const response = await axios.delete(`${API_URL}/api/transactions/${transactionId}`);
-    
-            if (response.status === 200) {
-                alert("取引が削除されました！");
-    
-                // console.log("📌 fetchTransactions を実行");
-                await fetchTransactions(); // ✅ 取引履歴の更新
-                
-                if (typeof fetchCashState === "function") {
-                    // console.log("📌 fetchCashState を実行");
-                    await fetchCashState(); // ✅ 金庫状態の更新
-                } else {
-                    console.warn("⚠ fetchCashState が未定義のため、金庫状態を更新できません。");
-                }
-            } else {
-                alert("削除に失敗しました。");
-            }
+            await axios.delete(`${API_URL}/api/transactions/${transactionId}`);
+            await fetchTransactionsData();
+            if (fetchCashState) await fetchCashState();
         } catch (error) {
-            console.error("❌ 削除エラー:", error);
-            alert("エラーが発生しました。");
+            console.error("削除エラー:", error);
         }
     };
+
     const handleImportClick = () => {
         document.getElementById('csvImportInput').click();
     };
-    
+
     const importCSV = async (event) => {
         const file = event.target.files[0];
         if (!file) return;
-    
+
         const formData = new FormData();
         formData.append('file', file);
-    
+
         try {
-            const response = await axios.post(`${API_URL}/api/import-csv`, formData, {
+            await axios.post(`${API_URL}/api/import-csv`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
-    
-            alert(response.data);
-            await fetchTransactions();
-            await fetchCashState();
+
+            await fetchTransactionsData();
+            if (fetchCashState) await fetchCashState();
         } catch (error) {
-            console.error('❌ CSVインポートエラー:', error);
-            alert('CSVインポートに失敗しました');
+            console.error('CSVインポートエラー:', error);
         } finally {
-            // 同じファイルを連続で選べるようにリセット
             event.target.value = "";
         }
     };
-    
-    
 
-    
     const exportToDenominationsCSV = async () => {
         try {
-            const response = await axios.get(`${API_URL}/api/export-denominations`, {
-                responseType: 'blob' // バイナリデータ（CSV）として受け取る
-            });
-    
-            // ダウンロードリンクを作成してクリック
+            const response = await axios.get(`${API_URL}/api/export-denominations`, { responseType: 'blob' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(new Blob([response.data]));
             link.download = 'denominations.csv';
             link.click();
         } catch (error) {
-            console.error("❌ CSVダウンロードエラー:", error);
+            console.error("CSVダウンロードエラー:", error);
         }
     };
-    
-    
-    
-    
+
+    const handleEditClick = (index) => {
+        setEditRow(index);
+    };
+
+    const handleInputChange = (index, field, value) => {
+        const updatedTransactions = [...transactions];
+        updatedTransactions[index][field] = value;
+        setTransactions(updatedTransactions);
+    };
+
+    const handleSaveClick = async (index) => {
+        const transaction = transactions[index];
+        try {
+            await axios.put(`${API_URL}/api/update-transaction-and-denomination/${transaction.TransactionID}`, transaction);
+            setEditRow(null);
+            fetchTransactionsData();
+            if (fetchCashState) fetchCashState();
+        } catch (error) {
+            console.error('更新エラー:', error);
+        }
+    };
+
+    const handleCancelClick = () => {
+        setEditRow(null);
+        fetchTransactionsData();
+    };
+
     return (
         <div className="container">
             {error && <p className="text-danger text-center">{error}</p>}
-            {/* 🔽 表示中の月を出す */}
-        {/* 🔽 表示中の月 */}
-        <h4 className="text-center my-3">
-            {new Date(`${currentMonth}-01`).getFullYear()}年{new Date(`${currentMonth}-01`).getMonth() + 1}月度
-        </h4>
-
-        <div className="d-flex justify-content-between align-items-center my-3">
-            {/* 🔽 左側（CSV Im/Ex） */}
-            <div>
-                <button className="btn btn-warning me-2" onClick={handleImportClick}>
-                    CSVIm
-                </button>
-                <button className="btn btn-info me-2" onClick={exportToDenominationsCSV}>
-                    CSVEx
-                </button>
+    
+            <h4 className="text-center my-3">{new Date(`${currentMonth}-01`).getFullYear()}年{new Date(`${currentMonth}-01`).getMonth() + 1}月度</h4>
+    
+            <div className="d-flex justify-content-between align-items-center my-3">
+                <div>
+                    <button className="btn btn-warning me-2" onClick={handleImportClick}>CSVIm</button>
+                    <button className="btn btn-info me-2" onClick={exportToDenominationsCSV}>CSVEx</button>
+                </div>
+                <div>
+                    <button className="btn btn-outline-primary me-2" onClick={() => setCurrentMonth(prev => new Date(new Date(prev + "-01").setMonth(new Date(prev + "-01").getMonth() - 1)).toISOString().slice(0, 7))}>◀ 前月</button>
+                    <button className="btn btn-outline-secondary me-2" onClick={() => setCurrentMonth(new Date().toISOString().slice(0, 7))}>📅 当月</button>
+                    <button className="btn btn-outline-primary me-2" onClick={() => setCurrentMonth(prev => new Date(new Date(prev + "-01").setMonth(new Date(prev + "-01").getMonth() + 1)).toISOString().slice(0, 7))}>次月 ▶</button>
+                </div>
+                <div>
+                    <PDFButton transactions={transactions} currentMonth={currentMonth} />
+                </div>
+                <input id="csvImportInput" type="file" accept=".csv" onChange={importCSV} style={{ display: 'none' }} />
             </div>
-
-            {/* 🔽 中央（前月・当月・次月） */}
-            <div>
-                <button className="btn btn-outline-primary me-2" onClick={() => setCurrentMonth(prev =>
-                    new Date(new Date(prev + "-01").setMonth(new Date(prev + "-01").getMonth() - 1)).toISOString().slice(0, 7))
-                }>
-                    ◀ 前月
-                </button>
-                <button className="btn btn-outline-secondary me-2" onClick={() => setCurrentMonth(new Date().toISOString().slice(0, 7))}>
-                    📅 当月
-                </button>
-                <button className="btn btn-outline-primary me-2" onClick={() => setCurrentMonth(prev =>
-                    new Date(new Date(prev + "-01").setMonth(new Date(prev + "-01").getMonth() + 1)).toISOString().slice(0, 7))
-                }>
-                    次月 ▶
-                </button>
-            </div>
-
-            {/* 🔽 右側（PDFボタン） */}
-            <div>
-                <PDFButton transactions={transactions} currentMonth={currentMonth} />
-            </div>
-
-            {/* CSVインポート隠しinput */}
-            <input
-                id="csvImportInput"
-                type="file"
-                accept=".csv"
-                onChange={importCSV}
-                style={{ display: 'none' }}
-            />
-        </div>
-
-
-            {/* ✅ 取引履歴テーブル */}
+    
             <div className="table-responsive">
                 <table className="table table-striped table-hover table-bordered text-center align-middle">
                     <thead className="table-dark">
@@ -205,35 +159,136 @@ const TransactionHistory = ({ fetchTransactions, fetchCashState }) => {
                         {transactions.length > 0 ? (
                             transactions.map((tx, index) => (
                                 <tr key={index}>
-                                    <td>{tx.TransactionDate ? new Date(tx.TransactionDate).toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" }) : "N/A"}</td>
-                                    <td className="text-end">{tx.Amount !== null ? `${tx.Amount < 0 ? "-" : ""}${Math.abs(tx.Amount).toLocaleString()}` : "N/A"}</td>
-                                    <td className="text-end">{tx.RunningBalance !== null ? `${tx.RunningBalance.toLocaleString()}` : "N/A"}</td>
-                                    <td className="text-start">{tx.Recipient || ""}</td>
-                                    <td className="text-start">{tx.Summary || ""}</td>
-                                    <td className="text-start">{tx.Memo || ""}</td>
-                                    <td className="text-end">{tx.TenThousandYen || 0}</td>
-                                    <td className="text-end">{tx.FiveThousandYen || 0}</td>
-                                    <td className="text-end">{tx.OneThousandYen || 0}</td>
-                                    <td className="text-end">{tx.FiveHundredYen || 0}</td>
-                                    <td className="text-end">{tx.OneHundredYen || 0}</td>
-                                    <td className="text-end">{tx.FiftyYen || 0}</td>
-                                    <td className="text-end">{tx.TenYen || 0}</td>
-                                    <td className="text-end">{tx.FiveYen || 0}</td>
-                                    <td className="text-end">{tx.OneYen || 0}</td>
-                                    <td>
-    <button 
-        className="btn btn-sm btn-danger" 
-        onClick={() => {
-            // console.log("🛠 削除しようとしている取引データ:", tx); // 🔍 `tx` のデータを確認
-            // console.log("🛠 削除対象の TransactionID:", tx.TransactionID); // 🔍 `TransactionID` が正しいか確認
-            handleDelete(tx.TransactionID);
-        }}
-    >
-        🗑 削除
-    </button>
-</td>
+                                    {editRow === index ? (
+                                        <>
+                                            <td>
+                                                <input
+                                                    type="date"
+                                                    value={tx.TransactionDate ? tx.TransactionDate.split('T')[0] : ''}
+                                                    onChange={(e) => handleInputChange(index, 'TransactionDate', e.target.value)}
+                                                />
+                                            </td>
+                                            <td>
+                                                <input
+                                                    type="number"
+                                                    value={tx.Amount || ''}
+                                                    onChange={(e) => handleInputChange(index, 'Amount', parseInt(e.target.value) || 0)}
+                                                />
+                                            </td>
+                                            <td>{tx.RunningBalance !== null ? tx.RunningBalance.toLocaleString() : 'N/A'}</td>
+                                            <td>
+                                                <input
+                                                    type="text"
+                                                    value={tx.Recipient || ''}
+                                                    onChange={(e) => handleInputChange(index, 'Recipient', e.target.value)}
+                                                />
+                                            </td>
+                                            <td>
+                                                <input
+                                                    type="text"
+                                                    value={tx.Summary || ''}
+                                                    onChange={(e) => handleInputChange(index, 'Summary', e.target.value)}
+                                                />
+                                            </td>
+                                            <td>
+                                                <input
+                                                    type="text"
+                                                    value={tx.Memo || ''}
+                                                    onChange={(e) => handleInputChange(index, 'Memo', e.target.value)}
+                                                />
+                                            </td>
+                                            <td>
+                                                <input
+                                                    type="number"
+                                                    value={tx.TenThousandYen || 0}
+                                                    onChange={(e) => handleInputChange(index, 'TenThousandYen', parseInt(e.target.value) || 0)}
+                                                />
+                                            </td>
+                                            <td>
+                                                <input
+                                                    type="number"
+                                                    value={tx.FiveThousandYen || 0}
+                                                    onChange={(e) => handleInputChange(index, 'FiveThousandYen', parseInt(e.target.value) || 0)}
+                                                />
+                                            </td>
+                                            <td>
+                                                <input
+                                                    type="number"
+                                                    value={tx.OneThousandYen || 0}
+                                                    onChange={(e) => handleInputChange(index, 'OneThousandYen', parseInt(e.target.value) || 0)}
+                                                />
+                                            </td>
+                                            <td>
+                                                <input
+                                                    type="number"
+                                                    value={tx.FiveHundredYen || 0}
+                                                    onChange={(e) => handleInputChange(index, 'FiveHundredYen', parseInt(e.target.value) || 0)}
+                                                />
+                                            </td>
+                                            <td>
+                                                <input
+                                                    type="number"
+                                                    value={tx.OneHundredYen || 0}
+                                                    onChange={(e) => handleInputChange(index, 'OneHundredYen', parseInt(e.target.value) || 0)}
+                                                />
+                                            </td>
+                                            <td>
+                                                <input
+                                                    type="number"
+                                                    value={tx.FiftyYen || 0}
+                                                    onChange={(e) => handleInputChange(index, 'FiftyYen', parseInt(e.target.value) || 0)}
+                                                />
+                                            </td>
+                                            <td>
+                                                <input
+                                                    type="number"
+                                                    value={tx.TenYen || 0}
+                                                    onChange={(e) => handleInputChange(index, 'TenYen', parseInt(e.target.value) || 0)}
+                                                />
+                                            </td>
+                                            <td>
+                                                <input
+                                                    type="number"
+                                                    value={tx.FiveYen || 0}
+                                                    onChange={(e) => handleInputChange(index, 'FiveYen', parseInt(e.target.value) || 0)}
+                                                />
+                                            </td>
+                                            <td>
+                                                <input
+                                                    type="number"
+                                                    value={tx.OneYen || 0}
+                                                    onChange={(e) => handleInputChange(index, 'OneYen', parseInt(e.target.value) || 0)}
+                                                />
+                                            </td>
+                                            <td>
+                                                <button className="btn btn-sm btn-success me-1" onClick={() => handleSaveClick(index)}>💾 保存</button>
+                                                <button className="btn btn-sm btn-secondary" onClick={handleCancelClick}>❌ キャンセル</button>
+                                            </td>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <td>{tx.TransactionDate ? new Date(tx.TransactionDate).toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" }) : "N/A"}</td>
+                                            <td className="text-end">{tx.Amount !== null ? `${tx.Amount < 0 ? "-" : ""}${Math.abs(tx.Amount).toLocaleString()}` : "N/A"}</td>
+                                            <td className="text-end">{tx.RunningBalance !== null ? `${tx.RunningBalance.toLocaleString()}` : "N/A"}</td>
+                                            <td className="text-start">{tx.Recipient || ""}</td>
+                                            <td className="text-start">{tx.Summary || ""}</td>
+                                            <td className="text-start">{tx.Memo || ""}</td>
+                                            <td className="text-end">{tx.TenThousandYen || 0}</td>
+                                            <td className="text-end">{tx.FiveThousandYen || 0}</td>
+                                            <td className="text-end">{tx.OneThousandYen || 0}</td>
+                                            <td className="text-end">{tx.FiveHundredYen || 0}</td>
+                                            <td className="text-end">{tx.OneHundredYen || 0}</td>
+                                            <td className="text-end">{tx.FiftyYen || 0}</td>
+                                            <td className="text-end">{tx.TenYen || 0}</td>
+                                            <td className="text-end">{tx.FiveYen || 0}</td>
+                                            <td className="text-end">{tx.OneYen || 0}</td>
 
-
+                                            <td>
+                                                <button className="btn btn-sm btn-danger me-1" onClick={() => handleDelete(tx.TransactionID)}>🗑 削除</button>
+                                                <button className="btn btn-sm btn-primary" onClick={() => handleEditClick(index)}>✏️ 修正</button>
+                                            </td>
+                                        </>
+                                    )}
                                 </tr>
                             ))
                         ) : (

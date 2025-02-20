@@ -188,6 +188,109 @@ router.delete("/transactions/:id", async (req, res) => {
     }
 });
 
+router.put('/update-transaction-and-denomination/:id', async (req, res) => {
+    const { id } = req.params;
+    const {
+        TransactionDate,
+        TransactionType,
+        Amount,
+        Summary,
+        Recipient,
+        Memo,
+        TenThousandYen,
+        FiveThousandYen,
+        OneThousandYen,
+        FiveHundredYen,
+        OneHundredYen,
+        FiftyYen,
+        TenYen,
+        FiveYen,
+        OneYen,
+    } = req.body;
+
+    const pool = await sql.connect(config);
+    let transaction;
+
+    try {
+        transaction = pool.transaction();
+        await transaction.begin();
+
+        // 1. 取引データ更新
+        await transaction.request()
+            .input('Id', sql.Int, id)
+            .input('TransactionDate', sql.DateTime2(3), TransactionDate)
+            .input('TransactionType', sql.NVarChar, TransactionType)
+            .input('Amount', sql.Int, Amount)
+            .input('Summary', sql.NVarChar, Summary)
+            .input('Recipient', sql.NVarChar, Recipient)
+            .input('Memo', sql.NVarChar, Memo)
+            .query(`
+                UPDATE Transactions
+                SET TransactionDate = @TransactionDate, TransactionType = @TransactionType, Amount = @Amount, Summary = @Summary, Recipient = @Recipient, Memo = @Memo
+                WHERE Id = @Id
+            `);
+
+        // 2. 金種データ更新 or 挿入
+        const denomExists = await transaction.request()
+            .input('TransactionId', sql.Int, id)
+            .query('SELECT 1 FROM Denomination WHERE TransactionId = @TransactionId');
+
+        if (denomExists.recordset.length > 0) {
+            await transaction.request()
+                .input('TransactionId', sql.Int, id)
+                .input('TenThousandYen', sql.Int, TenThousandYen)
+                .input('FiveThousandYen', sql.Int, FiveThousandYen)
+                .input('OneThousandYen', sql.Int, OneThousandYen)
+                .input('FiveHundredYen', sql.Int, FiveHundredYen)
+                .input('OneHundredYen', sql.Int, OneHundredYen)
+                .input('FiftyYen', sql.Int, FiftyYen)
+                .input('TenYen', sql.Int, TenYen)
+                .input('FiveYen', sql.Int, FiveYen)
+                .input('OneYen', sql.Int, OneYen)
+                .query(`
+                    UPDATE Denomination
+                    SET TenThousandYen = @TenThousandYen, FiveThousandYen = @FiveThousandYen, OneThousandYen = @OneThousandYen, 
+                        FiveHundredYen = @FiveHundredYen, OneHundredYen = @OneHundredYen, FiftyYen = @FiftyYen, 
+                        TenYen = @TenYen, FiveYen = @FiveYen, OneYen = @OneYen
+                    WHERE TransactionId = @TransactionId
+                `);
+        } else {
+            await transaction.request()
+                .input('TransactionId', sql.Int, id)
+                .input('TenThousandYen', sql.Int, TenThousandYen)
+                .input('FiveThousandYen', sql.Int, FiveThousandYen)
+                .input('OneThousandYen', sql.Int, OneThousandYen)
+                .input('FiveHundredYen', sql.Int, FiveHundredYen)
+                .input('OneHundredYen', sql.Int, OneHundredYen)
+                .input('FiftyYen', sql.Int, FiftyYen)
+                .input('TenYen', sql.Int, TenYen)
+                .input('FiveYen', sql.Int, FiveYen)
+                .input('OneYen', sql.Int, OneYen)
+                .query(`
+                    INSERT INTO Denomination (TransactionId, TenThousandYen, FiveThousandYen, OneThousandYen, FiveHundredYen, OneHundredYen, FiftyYen, TenYen, FiveYen, OneYen)
+                    VALUES (@TransactionId, @TenThousandYen, @FiveThousandYen, @OneThousandYen, @FiveHundredYen, @OneHundredYen, @FiftyYen, @TenYen, @FiveYen, @OneYen)
+                `);
+        }
+
+        await transaction.commit();
+
+        const startOfMonth = TransactionDate ? new Date(TransactionDate) : new Date();
+        const startOfMonthDate = new Date(startOfMonth.getFullYear(), startOfMonth.getMonth(), 1);
+        const historyResult = await pool.request()
+            .input('StartDate', sql.Date, startOfMonthDate)
+            .execute('GetTransactionHistory');
+
+        res.status(200).json({ transactions: historyResult.recordset });
+    } catch (err) {
+        if (transaction && transaction._acquiredConnection) {
+            await transaction.rollback();
+        }
+        console.error('❌ 更新エラー:', err);
+        res.status(500).send('更新に失敗しました');
+    }
+});
+
+
 router.get("/export-denominations", async (req, res) => {
     try {
         const pool = await sql.connect(config);
@@ -385,6 +488,7 @@ router.post('/import-csv', upload.single('file'), async (req, res) => {
 
 
 
+
 // サーバー起動処理
 const PORT = process.env.PORT || 5000;
 connectDB().then(() => {
@@ -392,3 +496,4 @@ connectDB().then(() => {
         console.log(`🚀 サーバー起動: http://localhost:${PORT}`);
     });
 });
+
