@@ -267,7 +267,9 @@ const CashManagementFormUI = () => {
                             className="form-select"
                         >
                             <option value="交通費">交通費</option>
+                            <option value="支払">支払</option>
                             <option value="その他">その他</option>
+                            <option value="その他">立替</option>
                             <option value="仮払">仮払</option>
                             <option value="仮払清算">仮払清算</option>
                             <option value="小口入金">小口入金</option>

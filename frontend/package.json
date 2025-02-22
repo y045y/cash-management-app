@@ -14,11 +14,12 @@
     "react-to-print": "^3.0.4",
     "web-vitals": "^4.2.4"
   },
-  "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "postbuild": "move build ../backend/build || mv build ../backend/build"
-  },
+"scripts": {
+  "start": "react-scripts start",
+  "build": "react-scripts build",
+  "postbuild": "powershell Move-Item -Path build -Destination ../backend/build -Force"
+},
+
   "browserslist": {
     "production": [
       ">0.2%",
