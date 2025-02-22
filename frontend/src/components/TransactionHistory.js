@@ -3,8 +3,8 @@ import axios from "axios";
 import PDFButton from "./PDFButton";
 import "bootstrap/dist/css/bootstrap.min.css";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
-// const API_URL = "https://cashmanagement-app-ahhjctexgrbbgce2.japaneast-01.azurewebsites.net";
+// const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+const API_URL = "https://cashmanagement-app-ahhjctexgrbbgce2.japaneast-01.azurewebsites.net";
 
 const TransactionHistory = ({ fetchTransactions, fetchCashState }) => {
     const [transactions, setTransactions] = useState([]);
