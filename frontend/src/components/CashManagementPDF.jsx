@@ -1,57 +1,69 @@
-import React from 'react';
-import { Page, Text, View, Document, StyleSheet, Font } from '@react-pdf/renderer';
+import React from "react";
+import {
+  Page,
+  Text,
+  View,
+  Document,
+  StyleSheet,
+  Font,
+} from "@react-pdf/renderer";
 
 // フォントの登録
 Font.register({
-  family: 'NotoSansJP',
-  src: '/fonts/NotoSansJP-Regular.ttf',
+  family: "NotoSansJP",
+  src: "/fonts/NotoSansJP-Regular.ttf",
 });
 
 // スタイル設定
 const styles = StyleSheet.create({
   page: {
     padding: 20,
-    fontFamily: 'NotoSansJP',
+    fontFamily: "NotoSansJP",
   },
   title: {
     fontSize: 16,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: 10,
   },
   dateText: {
     fontSize: 12,
-    textAlign: 'right',
+    textAlign: "right",
   },
   table: {
-    display: 'table',
-    width: '100%',
-    borderStyle: 'solid',
+    display: "table",
+    width: "100%",
+    borderStyle: "solid",
     borderWidth: 1,
     marginTop: 10,
   },
   tableRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     borderBottomWidth: 1,
-    borderBottomColor: '#000',
-    borderRightWidth: 1,
-    borderRightColor: '#000',
+    borderBottomColor: "#000",
     height: 30,
-    alignItems: 'center',
   },
+  // セル（左寄せ）
   tableCellLeft: {
-    padding: 4,
-    fontSize: 10,
-    textAlign: 'left',
+    justifyContent: "center",
     borderRightWidth: 1,
-    borderRightColor: '#000',
+    borderRightColor: "#000",
+    borderBottomWidth: 1,
+    borderBottomColor: "#000",
+    height: 30,
+    paddingLeft: 4,
   },
+  // セル（右寄せ）
   tableCellRight: {
-    padding: 4,
-    fontSize: 10,
-    textAlign: 'right',
+    justifyContent: "center",
+    alignItems: "flex-end",
     borderRightWidth: 1,
-    borderRightColor: '#000',
+    borderRightColor: "#000",
+    borderBottomWidth: 1,
+    borderBottomColor: "#000",
+    height: 30,
+    paddingRight: 4,
   },
+  // 各列幅
   dateCell: { width: 50 },
   depositCell: { width: 50 },
   withdrawalCell: { width: 50 },
@@ -62,6 +74,7 @@ const styles = StyleSheet.create({
   currencyCell: { width: 30 },
 });
 
+// データをページ単位に分割
 const splitIntoPages = (data, itemsPerPage = 14) => {
   const pages = [];
   for (let i = 0; i < data.length; i += itemsPerPage) {
@@ -70,85 +83,203 @@ const splitIntoPages = (data, itemsPerPage = 14) => {
   return pages;
 };
 
-const CashManagementPDF = ({ history = [], previousCarryOver = {}, currentMonth }) => {
+// 長文省略用関数
+const truncate = (text, max) =>
+  text && text.length > max ? text.slice(0, max - 1) + "…" : text;
+
+// メインコンポーネント
+const CashManagementPDF = ({
+  history = [],
+  previousCarryOver = {},
+  currentMonth,
+}) => {
   const pages = splitIntoPages(history, 14);
-  const formatNumber = (number) => (number != null ? new Intl.NumberFormat('ja-JP').format(number) : '0');
+
+  const formatNumber = (number) =>
+    number != null ? new Intl.NumberFormat("ja-JP").format(number) : "0";
+
   const formatDate = (dateString) => {
     if (!dateString) return "";
     const date = new Date(dateString);
     return `${date.getMonth() + 1}/${date.getDate()}`;
   };
+
   return (
     <Document>
       {pages.map((pageHistory, pageNumber) => (
-        <Page key={pageNumber} style={styles.page} size={{ width: 841.89, height: 595.28 }}>
-          <Text style={styles.title}>金庫管理履歴表 ({currentMonth}月) - {pageNumber + 1}ページ</Text>
+        <Page
+          key={pageNumber}
+          style={styles.page}
+          size={{ width: 841.89, height: 595.28 }}
+        >
+          <Text style={styles.title}>
+            金庫管理履歴表 ({currentMonth}月) - {pageNumber + 1}ページ
+          </Text>
           <Text style={styles.dateText}>{new Date().toLocaleDateString()}</Text>
-  
+
           <View style={styles.table}>
+            {/* ヘッダ行 */}
             <View style={styles.tableRow}>
-              <Text style={[styles.tableCellLeft, styles.dateCell]}>日付</Text>
-              <Text style={[styles.tableCellRight, styles.depositCell]}>入金</Text>
-              <Text style={[styles.tableCellRight, styles.withdrawalCell]}>出金</Text>
-              <Text style={[styles.tableCellRight, styles.balanceCell]}>残高</Text>
-              <Text style={[styles.tableCellLeft, styles.recipientCell]}>相手</Text>
-              <Text style={[styles.tableCellLeft, styles.summaryCell]}>摘要</Text>
-              <Text style={[styles.tableCellLeft, styles.memoCell]}>メモ</Text>
-              <Text style={[styles.tableCellRight, styles.currencyCell]}>万</Text>
-              <Text style={[styles.tableCellRight, styles.currencyCell]}>5千</Text>
-              <Text style={[styles.tableCellRight, styles.currencyCell]}>千</Text>
-              <Text style={[styles.tableCellRight, styles.currencyCell]}>5百</Text>
-              <Text style={[styles.tableCellRight, styles.currencyCell]}>百</Text>
-              <Text style={[styles.tableCellRight, styles.currencyCell]}>5十</Text>
-              <Text style={[styles.tableCellRight, styles.currencyCell]}>十</Text>
-              <Text style={[styles.tableCellRight, styles.currencyCell]}>5</Text>
-              <Text style={[styles.tableCellRight, styles.currencyCell]}>1</Text>
+              {[
+                "日付",
+                "入金",
+                "出金",
+                "残高",
+                "相手",
+                "摘要",
+                "メモ",
+                "万",
+                "5千",
+                "千",
+                "5百",
+                "百",
+                "5十",
+                "十",
+                "5",
+                "1",
+              ].map((label, i) => (
+                <View
+                  key={i}
+                  style={[
+                    styles[
+                      i < 4 || (i >= 7 && i <= 15)
+                        ? "tableCellRight"
+                        : "tableCellLeft"
+                    ],
+                    styles[
+                      [
+                        "dateCell",
+                        "depositCell",
+                        "withdrawalCell",
+                        "balanceCell",
+                        "recipientCell",
+                        "summaryCell",
+                        "memoCell",
+                        "currencyCell",
+                        "currencyCell",
+                        "currencyCell",
+                        "currencyCell",
+                        "currencyCell",
+                        "currencyCell",
+                        "currencyCell",
+                        "currencyCell",
+                        "currencyCell",
+                      ][i]
+                    ],
+                  ]}
+                >
+                  <Text style={{ fontSize: 10 }}>{label}</Text>
+                </View>
+              ))}
             </View>
-  
-            {/* ✅ 1ページ目だけ繰越金を表示 */}
+
+            {/* 繰越行（1ページ目のみ） */}
             {pageNumber === 0 && (
               <View style={styles.tableRow}>
-                <Text style={[styles.tableCellLeft, styles.dateCell]}>繰越</Text>
-                <Text style={[styles.tableCellRight, styles.depositCell]}></Text>
-                <Text style={[styles.tableCellRight, styles.withdrawalCell]}></Text>
-                <Text style={[styles.tableCellRight, styles.balanceCell]}>{formatNumber(previousCarryOver.RunningBalance || 0)}</Text>
-                <Text style={[styles.tableCellLeft, styles.recipientCell]}></Text>
-                <Text style={[styles.tableCellLeft, styles.summaryCell]}></Text>
-                <Text style={[styles.tableCellLeft, styles.memoCell]}></Text>
-                <Text style={[styles.tableCellRight, styles.currencyCell]}>{previousCarryOver.TenThousandYen || 0}</Text>
-                <Text style={[styles.tableCellRight, styles.currencyCell]}>{previousCarryOver.FiveThousandYen || 0}</Text>
-                <Text style={[styles.tableCellRight, styles.currencyCell]}>{previousCarryOver.OneThousandYen || 0}</Text>
-                <Text style={[styles.tableCellRight, styles.currencyCell]}>{previousCarryOver.FiveHundredYen || 0}</Text>
-                <Text style={[styles.tableCellRight, styles.currencyCell]}>{previousCarryOver.OneHundredYen || 0}</Text>
-                <Text style={[styles.tableCellRight, styles.currencyCell]}>{previousCarryOver.FiftyYen || 0}</Text>
-                <Text style={[styles.tableCellRight, styles.currencyCell]}>{previousCarryOver.TenYen || 0}</Text>
-                <Text style={[styles.tableCellRight, styles.currencyCell]}>{previousCarryOver.FiveYen || 0}</Text>
-                <Text style={[styles.tableCellRight, styles.currencyCell]}>{previousCarryOver.OneYen || 0}</Text>
+                <View style={[styles.tableCellLeft, styles.dateCell]}>
+                  <Text style={{ fontSize: 10 }}>繰越</Text>
+                </View>
+                <View style={[styles.tableCellRight, styles.depositCell]}>
+                  <Text style={{ fontSize: 10 }}></Text>
+                </View>
+                <View style={[styles.tableCellRight, styles.withdrawalCell]}>
+                  <Text style={{ fontSize: 10 }}></Text>
+                </View>
+                <View style={[styles.tableCellRight, styles.balanceCell]}>
+                  <Text style={{ fontSize: 10 }}>
+                    {formatNumber(previousCarryOver.RunningBalance || 0)}
+                  </Text>
+                </View>
+                {["recipientCell", "summaryCell", "memoCell"].map((cls, i) => (
+                  <View key={i} style={[styles.tableCellLeft, styles[cls]]}>
+                    <Text style={{ fontSize: 10 }}></Text>
+                  </View>
+                ))}
+                {[
+                  "TenThousandYen",
+                  "FiveThousandYen",
+                  "OneThousandYen",
+                  "FiveHundredYen",
+                  "OneHundredYen",
+                  "FiftyYen",
+                  "TenYen",
+                  "FiveYen",
+                  "OneYen",
+                ].map((key, i) => (
+                  <View
+                    key={i}
+                    style={[styles.tableCellRight, styles.currencyCell]}
+                  >
+                    <Text style={{ fontSize: 10 }}>
+                      {previousCarryOver[key] || 0}
+                    </Text>
+                  </View>
+                ))}
               </View>
             )}
-  
+
+            {/* データ行 */}
             {pageHistory.map((item, index) => (
               <View key={index} style={styles.tableRow}>
-                <Text style={[styles.tableCellLeft, styles.dateCell]}>{formatDate(item.TransactionDate)}</Text>
-                <Text style={[styles.tableCellRight, styles.depositCell]}>
-                  {(item.TransactionType === "入金" || item.TransactionType === "Deposit") ? formatNumber(item.Amount ?? 0) : ""}
-                </Text>
-                <Text style={[styles.tableCellRight, styles.withdrawalCell]}>
-                  {(item.TransactionType === "出金" || item.TransactionType === "Withdrawal") ? formatNumber(item.Amount ?? 0) : ""}
-                </Text>
-                <Text style={[styles.tableCellRight, styles.balanceCell]}>{formatNumber(item.RunningBalance || 0)}</Text>
-                <Text style={[styles.tableCellLeft, styles.recipientCell]}>{item.Recipient}</Text>
-                <Text style={[styles.tableCellLeft, styles.summaryCell]}>{item.Summary}</Text>
-                <Text style={[styles.tableCellLeft, styles.memoCell]}>{item.Memo}</Text>
-                <Text style={[styles.tableCellRight, styles.currencyCell]}>{item.TenThousandYen || 0}</Text>
-                <Text style={[styles.tableCellRight, styles.currencyCell]}>{item.FiveThousandYen || 0}</Text>
-                <Text style={[styles.tableCellRight, styles.currencyCell]}>{item.OneThousandYen || 0}</Text>
-                <Text style={[styles.tableCellRight, styles.currencyCell]}>{item.FiveHundredYen || 0}</Text>
-                <Text style={[styles.tableCellRight, styles.currencyCell]}>{item.OneHundredYen || 0}</Text>
-                <Text style={[styles.tableCellRight, styles.currencyCell]}>{item.FiftyYen || 0}</Text>
-                <Text style={[styles.tableCellRight, styles.currencyCell]}>{item.TenYen || 0}</Text>
-                <Text style={[styles.tableCellRight, styles.currencyCell]}>{item.FiveYen || 0}</Text>
-                <Text style={[styles.tableCellRight, styles.currencyCell]}>{item.OneYen || 0}</Text>
+                <View style={[styles.tableCellLeft, styles.dateCell]}>
+                  <Text style={{ fontSize: 10 }}>
+                    {formatDate(item.TransactionDate)}
+                  </Text>
+                </View>
+                <View style={[styles.tableCellRight, styles.depositCell]}>
+                  <Text style={{ fontSize: 10 }}>
+                    {item.TransactionType === "入金" ||
+                    item.TransactionType === "Deposit"
+                      ? formatNumber(item.Amount ?? 0)
+                      : ""}
+                  </Text>
+                </View>
+                <View style={[styles.tableCellRight, styles.withdrawalCell]}>
+                  <Text style={{ fontSize: 10 }}>
+                    {item.TransactionType === "出金" ||
+                    item.TransactionType === "Withdrawal"
+                      ? formatNumber(item.Amount ?? 0)
+                      : ""}
+                  </Text>
+                </View>
+                <View style={[styles.tableCellRight, styles.balanceCell]}>
+                  <Text style={{ fontSize: 10 }}>
+                    {formatNumber(item.RunningBalance || 0)}
+                  </Text>
+                </View>
+                <View style={[styles.tableCellLeft, styles.recipientCell]}>
+                  <Text style={{ fontSize: 10 }} wrap={false}>
+                    {item.Recipient}
+                  </Text>
+                </View>
+                <View style={[styles.tableCellLeft, styles.summaryCell]}>
+                  <Text style={{ fontSize: 10 }} wrap={false}>
+                    {item.Summary}
+                  </Text>
+                </View>
+                <View style={[styles.tableCellLeft, styles.memoCell]}>
+                  <Text style={{ fontSize: 10 }} wrap={false}>
+                    {truncate(item.Memo, 18)}
+                  </Text>
+                </View>
+                {[
+                  "TenThousandYen",
+                  "FiveThousandYen",
+                  "OneThousandYen",
+                  "FiveHundredYen",
+                  "OneHundredYen",
+                  "FiftyYen",
+                  "TenYen",
+                  "FiveYen",
+                  "OneYen",
+                ].map((key, i) => (
+                  <View
+                    key={i}
+                    style={[styles.tableCellRight, styles.currencyCell]}
+                  >
+                    <Text style={{ fontSize: 10 }}>{item[key] || 0}</Text>
+                  </View>
+                ))}
               </View>
             ))}
           </View>
@@ -156,8 +287,6 @@ const CashManagementPDF = ({ history = [], previousCarryOver = {}, currentMonth 
       ))}
     </Document>
   );
-  
-  
 };
 
 export default CashManagementPDF;
