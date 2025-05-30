@@ -3,20 +3,20 @@ import axios from "axios";
 import PDFButton from "./PDFButton";
 import "bootstrap/dist/css/bootstrap.min.css";
 
-// const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
-const API_URL =
-  "https://cashmanagement-app-ahhjctexgrbbgce2.japaneast-01.azurewebsites.net";
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 const TransactionHistory = ({
   transactions,
   fetchTransactions,
   fetchCashState,
+  currentMonth,
+  setCurrentMonth,
 }) => {
   const [localTransactions, setLocalTransactions] = useState([]);
   const [editRow, setEditRow] = useState(null);
-  const [currentMonth, setCurrentMonth] = useState(
-    new Date().toISOString().slice(0, 7)
-  );
+  // const [currentMonth, setCurrentMonth] = useState(
+  //   new Date().toISOString().slice(0, 7)
+  // );
   const [error, setError] = useState(null);
 
   // props.transactions の変更があれば即反映
@@ -24,45 +24,13 @@ const TransactionHistory = ({
     setLocalTransactions(transactions || []);
   }, [transactions]);
 
-  const fetchTransactionsData = useCallback(
-    async (retryCount = 3) => {
-      try {
-        const response = await axios.get(
-          `${API_URL}/api/transaction-history?startDate=${currentMonth}-01`,
-          { timeout: 10000 }
-        );
-        if (response.data && response.data.transactions) {
-          // 🔽 ここは setLocalTransactions に変更
-          setLocalTransactions(response.data.transactions);
-        } else {
-          setLocalTransactions([]);
-          setError("データが取得できませんでした。");
-        }
-      } catch (error) {
-        console.error("取引履歴取得エラー:", error);
-        if (retryCount > 0) {
-          setTimeout(() => fetchTransactionsData(retryCount - 1), 2000);
-        } else {
-          setError(
-            "取引履歴の取得に失敗しました。サーバーを確認してください。"
-          );
-        }
-      }
-    },
-    [currentMonth]
-  );
-
-  useEffect(() => {
-    fetchTransactionsData();
-  }, [fetchTransactionsData]);
-
   const handleDelete = async (transactionId) => {
     if (!transactionId) return;
     if (!window.confirm("この取引を削除しますか？")) return;
 
     try {
       await axios.delete(`${API_URL}/api/transactions/${transactionId}`);
-      await fetchTransactionsData();
+      await fetchTransactions();
       if (fetchCashState) await fetchCashState();
     } catch (error) {
       console.error("削除エラー:", error);
@@ -85,7 +53,7 @@ const TransactionHistory = ({
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      await fetchTransactionsData();
+      await fetchTransactions();
       if (fetchCashState) await fetchCashState();
     } catch (error) {
       console.error("CSVインポートエラー:", error);
@@ -126,16 +94,12 @@ const TransactionHistory = ({
         transaction
       );
       setEditRow(null);
-      fetchTransactionsData();
-      if (fetchCashState) fetchCashState();
+
+      if (fetchTransactions) await fetchTransactions(); // ✅ 親から再取得
+      if (fetchCashState) await fetchCashState(); // ✅ 金庫状態も更新
     } catch (error) {
       console.error("更新エラー:", error);
     }
-  };
-
-  const handleCancelClick = () => {
-    setEditRow(null);
-    fetchTransactionsData();
   };
 
   return (

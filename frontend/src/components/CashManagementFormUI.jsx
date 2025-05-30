@@ -5,11 +5,13 @@ import axios from "axios";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "../styles/cashManagementForm.css";
 
-// const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
-const API_URL =
-  "https://cashmanagement-app-ahhjctexgrbbgce2.japaneast-01.azurewebsites.net";
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 const CashManagementFormUI = () => {
+  const [currentMonth, setCurrentMonth] = useState(() =>
+    new Date().toISOString().slice(0, 7)
+  );
+
   const [difference, setDifference] = useState(0);
   const [loading, setLoading] = useState(false);
   const [transactions, setTransactions] = useState([]);
@@ -27,23 +29,22 @@ const CashManagementFormUI = () => {
 
   const fetchTransactions = async () => {
     try {
-      const startDate = new Date();
-      startDate.setMonth(startDate.getMonth() - 1); // 先月も含める
-      startDate.setDate(1); // 先月の1日から取得
+      const [year, month] = currentMonth.split("-").map(Number);
 
-      const endDate = new Date().toISOString().slice(0, 10); // 今日の日付
+      const startDate = `${currentMonth}-01`;
+      const endDate = new Date(year, month, 0).toISOString().slice(0, 10); // ←ここを修正
+
+      // ✅ 修正：月末日を正しく取得
+      const lastDay = new Date(year, month, 0).getDate(); // ← 5月なら 31
+      const endDateStr = `${currentMonth}-${String(lastDay).padStart(2, "0")}`;
 
       const response = await axios.get(
-        `${API_URL}/api/transaction-history?startDate=${startDate
-          .toISOString()
-          .slice(0, 10)}&endDate=${endDate}`
+        `${API_URL}/api/transaction-history?startDate=${startDate}&endDate=${endDateStr}`
       );
-
-      // console.log("📌 取得した取引履歴:", response.data.transactions);
 
       setTransactions(response.data.transactions || []);
     } catch (error) {
-      //console.error("❌ 取引履歴取得エラー:", error);
+      console.error("❌ 取引履歴取得エラー:", error);
     }
   };
 
@@ -67,7 +68,8 @@ const CashManagementFormUI = () => {
   useEffect(() => {
     fetchTransactions();
     fetchCashState();
-  }, []);
+  }, [currentMonth]); // ← これ重要
+
   // 🔹 取引履歴が更新されたらログを出力
 
   useEffect(() => {
@@ -331,6 +333,8 @@ const CashManagementFormUI = () => {
           transactions={transactions}
           fetchTransactions={fetchTransactions}
           fetchCashState={fetchCashState}
+          currentMonth={currentMonth}
+          setCurrentMonth={setCurrentMonth}
         />
       </div>
     </div>

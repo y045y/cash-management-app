@@ -6,7 +6,7 @@ const csv = require("csv-parser");
 const getTransactionHistory = async (req, res) => {
   try {
     const pool = await sql.connect(config);
-    const { startDate } = req.query;
+    const { startDate, endDate } = req.query;
 
     if (!startDate) {
       return res
@@ -17,6 +17,7 @@ const getTransactionHistory = async (req, res) => {
     const result = await pool
       .request()
       .input("StartDate", sql.Date, startDate)
+      .input("EndDate", sql.Date, endDate || null)  // 未指定時はSQL側で自動補完
       .execute("GetTransactionHistory");
 
     res.json({ transactions: result.recordset });
@@ -25,6 +26,7 @@ const getTransactionHistory = async (req, res) => {
     res.status(500).json({ error: "取引履歴の取得に失敗しました" });
   }
 };
+
 
 const insertTransaction = async (req, res) => {
   try {
