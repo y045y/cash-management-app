@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import axios from "axios";
 import PDFButton from "./PDFButton";
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -14,10 +14,19 @@ const TransactionHistory = ({
 }) => {
   const [localTransactions, setLocalTransactions] = useState([]);
   const [editRow, setEditRow] = useState(null);
-  // const [currentMonth, setCurrentMonth] = useState(
-  //   new Date().toISOString().slice(0, 7)
-  // );
+  const [filterRecipient, setFilterRecipient] = useState("");
+  const [filterSummary, setFilterSummary] = useState("");
+
   const [error, setError] = useState(null);
+
+  const filteredTransactions = useMemo(() => {
+    return localTransactions.filter((t) => {
+      return (
+        (filterRecipient === "" || t.Recipient === filterRecipient) &&
+        (filterSummary === "" || t.Summary === filterSummary)
+      );
+    });
+  }, [localTransactions, filterRecipient, filterSummary]);
 
   // props.transactions の変更があれば即反映
   useEffect(() => {
@@ -76,18 +85,8 @@ const TransactionHistory = ({
     }
   };
 
-  const handleEditClick = (index) => {
-    setEditRow(index);
-  };
-
-  const handleInputChange = (index, field, value) => {
-    const updatedTransactions = [...localTransactions];
-    updatedTransactions[index][field] = value;
-    setLocalTransactions(updatedTransactions);
-  };
-
   const handleSaveClick = async (index) => {
-    const transaction = transactions[index];
+    const transaction = filteredTransactions[index]; // ← 🔁 こっちを使う
     try {
       await axios.put(
         `${API_URL}/api/update-transaction-and-denomination/${transaction.TransactionID}`,
@@ -95,8 +94,8 @@ const TransactionHistory = ({
       );
       setEditRow(null);
 
-      if (fetchTransactions) await fetchTransactions(); // ✅ 親から再取得
-      if (fetchCashState) await fetchCashState(); // ✅ 金庫状態も更新
+      if (fetchTransactions) await fetchTransactions();
+      if (fetchCashState) await fetchCashState();
     } catch (error) {
       console.error("更新エラー:", error);
     }
@@ -176,6 +175,38 @@ const TransactionHistory = ({
           style={{ display: "none" }}
         />
       </div>
+      {/* 🔽 ここにフィルターを差し込む */}
+      <div className="d-flex gap-3 mb-2">
+        <select
+          className="form-select w-auto"
+          value={filterRecipient}
+          onChange={(e) => setFilterRecipient(e.target.value)}
+        >
+          <option value="">すべての相手</option>
+          {[...new Set(localTransactions.map((t) => t.Recipient))]
+            .filter(Boolean)
+            .map((r) => (
+              <option key={r} value={r}>
+                {r}
+              </option>
+            ))}
+        </select>
+
+        <select
+          className="form-select w-auto"
+          value={filterSummary}
+          onChange={(e) => setFilterSummary(e.target.value)}
+        >
+          <option value="">すべての摘要</option>
+          {[...new Set(localTransactions.map((t) => t.Summary))]
+            .filter(Boolean)
+            .map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+        </select>
+      </div>
 
       <div className="table-responsive">
         <table className="table table-striped table-hover table-bordered text-center align-middle">
@@ -200,8 +231,8 @@ const TransactionHistory = ({
             </tr>
           </thead>
           <tbody>
-            {localTransactions.length > 0 ? (
-              localTransactions.map((tx, index) => (
+            {filteredTransactions.length > 0 ? (
+              filteredTransactions.map((tx, index) => (
                 <tr key={index}>
                   {editRow === index ? (
                     <>
