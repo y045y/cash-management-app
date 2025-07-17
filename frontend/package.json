@@ -16,8 +16,7 @@
   },
 "scripts": {
   "start": "react-scripts start",
-  "build": "react-scripts build",
-  "postbuild": "powershell Move-Item -Path build -Destination ../backend/build -Force"
+  "build": "react-scripts build"
 },
 
   "browserslist": {

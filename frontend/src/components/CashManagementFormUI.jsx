@@ -270,6 +270,7 @@ const CashManagementFormUI = () => {
               <option value="林">林</option>
               <option value="小林">小林</option>
               <option value="黒田">黒田</option>
+              <option value="鈴木">鈴木</option>
             </select>
           </div>
 
