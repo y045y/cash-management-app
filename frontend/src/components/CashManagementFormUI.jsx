@@ -1,3 +1,4 @@
+// frontend/src/components/CashManagementFormUI.jsx
 import React, { useState, useEffect } from "react";
 import CashStateTable from "./CashStateTable";
 import TransactionHistory from "./TransactionHistory";
@@ -27,15 +28,13 @@ const CashManagementFormUI = () => {
     memo: "",
   });
 
+  // 取引履歴取得
   const fetchTransactions = async () => {
     try {
       const [year, month] = currentMonth.split("-").map(Number);
-
       const startDate = `${currentMonth}-01`;
-      const endDate = new Date(year, month, 0).toISOString().slice(0, 10); // ←ここを修正
 
-      // ✅ 修正：月末日を正しく取得
-      const lastDay = new Date(year, month, 0).getDate(); // ← 5月なら 31
+      const lastDay = new Date(year, month, 0).getDate();
       const endDateStr = `${currentMonth}-${String(lastDay).padStart(2, "0")}`;
 
       const response = await axios.get(
@@ -48,6 +47,7 @@ const CashManagementFormUI = () => {
     }
   };
 
+  // 金庫状態取得（バックエンドは Total◯◯Yen なのでここでマッピング）
   const fetchCashState = async () => {
     try {
       const response = await axios.get(`${API_URL}/api/current-inventory`, {
@@ -55,31 +55,28 @@ const CashManagementFormUI = () => {
       });
 
       if (response.status === 200 && response.data) {
-        // console.log("📌 取得した金庫状態:", response.data);
-        setCashState(response.data);
-      } else {
-        //  console.error("⚠️ 金庫状態の取得に失敗しました。レスポンス:", response);
+        const data = response.data;
+        setCashState({
+          TenThousandYen: data.TotalTenThousandYen || 0,
+          FiveThousandYen: data.TotalFiveThousandYen || 0,
+          OneThousandYen: data.TotalOneThousandYen || 0,
+          FiveHundredYen: data.TotalFiveHundredYen || 0,
+          OneHundredYen: data.TotalOneHundredYen || 0,
+          FiftyYen: data.TotalFiftyYen || 0,
+          TenYen: data.TotalTenYen || 0,
+          FiveYen: data.TotalFiveYen || 0,
+          OneYen: data.TotalOneYen || 0,
+        });
       }
     } catch (error) {
-      //console.error("❌ 金庫状態取得エラー:", error);
+      console.error("❌ 金庫状態取得エラー:", error);
     }
   };
 
   useEffect(() => {
     fetchTransactions();
     fetchCashState();
-  }, [currentMonth]); // ← これ重要
-
-  // 🔹 取引履歴が更新されたらログを出力
-
-  useEffect(() => {
-    //console.log("📌 取引履歴が更新されました:", transactions);
-  }, [transactions]);
-
-  // 🔹 金庫状態が更新されたらログを出力
-  useEffect(() => {
-    // console.log("📌 現在の金庫状態が更新されました:", cashState);
-  }, [cashState]);
+  }, [currentMonth]);
 
   const handleSubmit = async () => {
     const transactionAmount = isNaN(difference)
@@ -96,8 +93,6 @@ const CashManagementFormUI = () => {
       );
       return;
     }
-
-    //console.log("📌 送信前のデータ:", { ...form, Amount: transactionAmount });
 
     const data = {
       TransactionDate: form.date,
@@ -117,8 +112,6 @@ const CashManagementFormUI = () => {
       OneYen: inputCounts.OneYen || 0,
     };
 
-    //console.log("📌 API に送信するデータ:", data);
-
     try {
       setLoading(true);
       const response = await axios.post(
@@ -126,70 +119,42 @@ const CashManagementFormUI = () => {
         data
       );
 
-      //  console.log("📌 API レスポンス:", response.data);
-
       if (response.status === 200 && response.data.data.length > 0) {
         alert("データが正常に保存されました！");
 
-        //    console.log("📌 追加する取引データ:", response.data.data[0]);
+        // 🔹 DB で在庫再計算 → それを再取得
+        await Promise.all([fetchTransactions(), fetchCashState()]);
 
-        // ✅ 最新の取引履歴と金庫状態を取得 (同期的に実行)
-        await fetchTransactions(); // ここでしっかりデータ取得を待つ
-        await fetchCashState(); // 金庫状態も取得
-
-        // ✅ 手動で最新データをセット (フロントエンドのUI反映)
-        setTransactions((prev) => {
-          const updatedTransactions = [...prev, response.data.data[0]];
-          //      console.log("📌 更新後の取引履歴:", updatedTransactions);
-          return updatedTransactions;
-        });
-
-        setCashState((prev) => {
-          const updatedCashState = { ...prev, ...response.data.data[0] };
-          //    console.log("📌 更新後の金庫状態:", updatedCashState);
-          return updatedCashState;
-        });
-
+        // フォームをリセット
         setForm({
           date: "",
           amount: 0,
           transactionType: "出金",
           summary: "交通費",
-          recipient: "なし",
+          recipient: "会社",
           memo: "",
         });
-
         setInputCounts({});
       } else {
         alert("エラーが発生しました");
       }
     } catch (error) {
-      //console.error("❌ エラー:", error);
+      console.error("❌ insert-transaction エラー:", error);
+      alert("通信エラーが発生しました");
     } finally {
       setLoading(false);
     }
   };
 
-  // ✅ 取引履歴の変化を監視
-  useEffect(() => {
-    // console.log("📌 取引履歴が更新されました:", transactions);
-  }, [transactions]);
-
-  // ✅ 現在の金庫状態の変化を監視
-  useEffect(() => {
-    //console.log("📌 現在の金庫状態が更新されました:", cashState);
-  }, [cashState]);
-
   const exportToCSV = async () => {
     try {
       const response = await axios.get(`${API_URL}/api/export-transactions`, {
-        responseType: "blob", // バイナリデータ（CSV）として受け取る
+        responseType: "blob",
       });
 
-      // ダウンロードリンクを作成してクリック
       const link = document.createElement("a");
-      link.href = URL.createObjectURL(new Blob([response.data])); // CSVデータをBlobとして扱う
-      link.download = "transactions.csv"; // ファイル名を指定
+      link.href = URL.createObjectURL(new Blob([response.data]));
+      link.download = "transactions.csv";
       link.click();
     } catch (error) {
       console.error("❌ CSVダウンロードエラー:", error);
@@ -198,13 +163,12 @@ const CashManagementFormUI = () => {
 
   return (
     <div className="container mt-4 p-3 bg-light rounded shadow-sm">
-      {/* タイトル */}
       <h3 className="text-center mb-3">金庫管理システム</h3>
 
       {/* フォーム入力エリア */}
       <form>
         <div className="row g-3 align-items-center">
-          {/* 日付入力 */}
+          {/* 日付 */}
           <div className="col-md-2">
             <label className="form-label fw-bold">日付</label>
             <input
@@ -220,11 +184,9 @@ const CashManagementFormUI = () => {
             <label className="form-label fw-bold">取引タイプ</label>
             <select
               value={form.transactionType}
-              onChange={(e) => {
-                const newTransactionType = e.target.value;
-                //console.log("📌 取引タイプ変更:", newTransactionType); // 🔹 ここでログを出力
-                setForm({ ...form, transactionType: newTransactionType });
-              }}
+              onChange={(e) =>
+                setForm({ ...form, transactionType: e.target.value })
+              }
               className="form-select"
             >
               <option value="出金">出金</option>
@@ -232,7 +194,7 @@ const CashManagementFormUI = () => {
             </select>
           </div>
 
-          {/* 金額入力 */}
+          {/* 金額 */}
           <div className="col-md-2">
             <label className="form-label fw-bold">金額</label>
             <input
@@ -246,7 +208,7 @@ const CashManagementFormUI = () => {
             />
           </div>
 
-          {/* 取引先 */}
+          {/* 相手 */}
           <div className="col-md-2">
             <label className="form-label fw-bold">相手</label>
             <select
@@ -285,7 +247,7 @@ const CashManagementFormUI = () => {
               <option value="交通費">交通費</option>
               <option value="支払">支払</option>
               <option value="その他">その他</option>
-              <option value="その他">立替</option>
+              <option value="立替">立替</option>
               <option value="仮払">仮払</option>
               <option value="仮払清算">仮払清算</option>
               <option value="小口入金">小口入金</option>
@@ -308,13 +270,12 @@ const CashManagementFormUI = () => {
         </div>
       </form>
 
-      {/* ✅ 金種入力テーブル */}
+      {/* 金種テーブル（表示専用 + 入力） */}
       <CashStateTable
         inputCounts={inputCounts}
-        cashState={cashState}
-        fetchCashState={fetchCashState}
         setInputCounts={setInputCounts}
         setDifference={setDifference}
+        cashState={cashState}
       />
 
       {/* 保存ボタン */}
@@ -328,7 +289,7 @@ const CashManagementFormUI = () => {
         </button>
       </div>
 
-      {/* ✅ 取引履歴テーブル */}
+      {/* 取引履歴 */}
       <div className="mt-4">
         <TransactionHistory
           transactions={transactions}
