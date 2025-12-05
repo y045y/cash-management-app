@@ -1,11 +1,12 @@
 {
-    "compilerOptions": {
-      "baseUrl": "src",
-      "paths": {
-        "@components/*": ["components/*"],
-        "@styles/*": ["styles/*"],
-        "@utils/*": ["utils/*"]
-      }
-    }
-  }
-  
+  "compilerOptions": {
+    "baseUrl": "./src",
+    "paths": {
+      "@components/*": ["components/*"],
+      "@styles/*": ["styles/*"],
+      "@utils/*": ["utils/*"]
+    },
+    "ignoreDeprecations": "6.0"
+  },
+  "include": ["src"]
+}
